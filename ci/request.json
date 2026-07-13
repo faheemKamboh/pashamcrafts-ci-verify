@@ -1,8 +1,20 @@
 {
-  "request_id": "shared-security-validation-1",
-  "target_sha": "be7c444bc559fc2926f8bb862cc2a3d342419be1",
+  "request_id": "issue-72-content-foundation-1",
+  "target_sha": "3b941fe70839f9b013ac4ad1fb5bb098039b1530",
   "checks": [
+    "schema",
+    "targeted",
+    "lint",
     "security"
   ],
-  "specs": []
+  "specs": [
+    "spec/models/content_page_spec.rb",
+    "spec/models/content_page_version_spec.rb",
+    "spec/models/policy_acceptance_spec.rb",
+    "spec/models/seo_redirectable_slug_spec.rb",
+    "spec/models/slug_redirect_spec.rb",
+    "spec/services/content/publish_page_spec.rb",
+    "spec/services/seo/public_slug_resolver_spec.rb",
+    "spec/services/seo/slug_change_recorder_spec.rb"
+  ]
 }
