@@ -223,3 +223,49 @@ jobs:
           test "${{ steps.lint.outcome }}" = "success"
           test "${{ steps.security.outcome }}" = "success"
           test "${{ steps.restore.outcome }}" = "success"
+
+  report:
+    name: Publish gateway status
+    if: always()
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - name: Publish sanitized result
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        run: |
+          set -euo pipefail
+
+          case "${VERIFY_RESULT}" in
+            success)
+              state="success"
+              description="Approved PashamCrafts commit passed verification"
+              ;;
+            failure)
+              state="failure"
+              description="Approved PashamCrafts commit failed verification"
+              ;;
+            *)
+              state="error"
+              description="PashamCrafts verification did not complete"
+              ;;
+          esac
+
+          payload="$(jq -n \
+            --arg state "${state}" \
+            --arg context "pashamcrafts/verification" \
+            --arg description "${description}" \
+            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
