@@ -2,8 +2,7 @@ name: Verify approved commit
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - "ci/target.sha"
       - ".github/workflows/verify.yml"
@@ -20,6 +19,12 @@ jobs:
     name: PashamCrafts verification
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    outputs:
+      database: ${{ steps.database.outputs.result }}
+      tests: ${{ steps.tests.outputs.result }}
+      lint: ${{ steps.lint.outputs.result }}
+      security: ${{ steps.security.outputs.result }}
+      restore: ${{ steps.restore.outputs.result }}
 
     services:
       postgres:
@@ -27,8 +32,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -52,10 +56,7 @@ jobs:
         run: |
           set -euo pipefail
           target_sha="$(tr -d '[:space:]' < ci/target.sha)"
-          if [[ ! "${target_sha}" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Invalid target SHA."
-            exit 1
-          fi
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid target SHA."; exit 1; }
           echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
           echo "Approved target: ${target_sha:0:12}"
 
@@ -98,16 +99,14 @@ jobs:
           set +e
           bundle exec rails db:create db:migrate > "${RUNNER_TEMP}/database.log" 2>&1
           status=$?
-          if [ "${status}" -eq 0 ]; then
-            echo "Database preparation: PASS"
-          else
-            echo "Database preparation: FAIL"
-          fi
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Database preparation: ${result^^}"
           exit "${status}"
 
       - name: Run RSpec and enforce coverage
         id: tests
-        if: steps.database.outcome == 'success'
+        if: steps.database.outputs.result == 'success'
         continue-on-error: true
         working-directory: app
         shell: bash
@@ -117,23 +116,17 @@ jobs:
           test_status=$?
           summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/rspec.log" | tail -n 1 || true)"
           coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/rspec.log" | tail -n 1 | awk '{print $3}' || true)"
-
-          [ -n "${summary}" ] && echo "RSpec: ${summary}" || echo "RSpec completed without a parseable summary."
-          [ -n "${coverage}" ] && echo "Line coverage: ${coverage}%" || echo "Line coverage was not reported."
-
           coverage_status=1
           if [ -n "${coverage}" ]; then
             awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
             coverage_status=$?
           fi
-
-          if [ "${test_status}" -eq 0 ] && [ "${coverage_status}" -eq 0 ]; then
-            echo "RSpec and coverage: PASS"
-            exit 0
-          fi
-
-          echo "RSpec or coverage: FAIL"
-          exit 1
+          if [ "${test_status}" -eq 0 ] && [ "${coverage_status}" -eq 0 ]; then result=success; else result=failure; fi
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          [ -n "${summary}" ] && echo "RSpec: ${summary}" || echo "RSpec summary unavailable."
+          [ -n "${coverage}" ] && echo "Line coverage: ${coverage}%" || echo "Line coverage unavailable."
+          echo "RSpec and coverage: ${result^^}"
+          test "${result}" = success
 
       - name: Run RuboCop
         id: lint
@@ -144,13 +137,10 @@ jobs:
           set +e
           bin/rubocop --format progress > "${RUNNER_TEMP}/rubocop.log" 2>&1
           status=$?
-          summary="$(grep -E '[0-9]+ files? inspected' "${RUNNER_TEMP}/rubocop.log" | tail -n 1 || true)"
-          [ -n "${summary}" ] && echo "RuboCop: ${summary}"
-          if [ "${status}" -eq 0 ]; then
-            echo "RuboCop: PASS"
-          else
-            echo "RuboCop: FAIL"
-          fi
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          grep -E '[0-9]+ files? inspected' "${RUNNER_TEMP}/rubocop.log" | tail -n 1 || true
+          echo "RuboCop: ${result^^}"
           exit "${status}"
 
       - name: Run Brakeman
@@ -162,11 +152,9 @@ jobs:
           set +e
           bin/brakeman --no-pager -q > "${RUNNER_TEMP}/brakeman.log" 2>&1
           status=$?
-          if [ "${status}" -eq 0 ]; then
-            echo "Brakeman: PASS"
-          else
-            echo "Brakeman: FAIL"
-          fi
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Brakeman: ${result^^}"
           exit "${status}"
 
       - name: Run backup and restore drill
@@ -193,17 +181,27 @@ jobs:
             test "$(psql "${RESTORE_DATABASE_URL}" -Atqc "SELECT COUNT(*) FROM audit_events WHERE action = 'backup.restore_drill'")" = "1"
           } > "${RUNNER_TEMP}/restore.log" 2>&1
           status=$?
-          if [ "${status}" -eq 0 ]; then
-            echo "Backup and restore: PASS"
-          else
-            echo "Backup and restore: FAIL"
-          fi
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Backup and restore: ${result^^}"
           exit "${status}"
 
       - name: Publish verification summary
         if: always()
         shell: bash
+        env:
+          DATABASE_RESULT: ${{ steps.database.outputs.result }}
+          TEST_RESULT: ${{ steps.tests.outputs.result }}
+          LINT_RESULT: ${{ steps.lint.outputs.result }}
+          SECURITY_RESULT: ${{ steps.security.outputs.result }}
+          RESTORE_RESULT: ${{ steps.restore.outputs.result }}
         run: |
+          set -euo pipefail
+          database="${DATABASE_RESULT:-error}"
+          tests="${TEST_RESULT:-error}"
+          lint="${LINT_RESULT:-error}"
+          security="${SECURITY_RESULT:-error}"
+          restore="${RESTORE_RESULT:-error}"
           {
             echo "## PashamCrafts verification"
             echo
@@ -211,18 +209,14 @@ jobs:
             echo
             echo "| Check | Result |"
             echo "|---|---|"
-            echo "| Database | ${{ steps.database.outcome }} |"
-            echo "| RSpec and coverage | ${{ steps.tests.outcome }} |"
-            echo "| RuboCop | ${{ steps.lint.outcome }} |"
-            echo "| Brakeman | ${{ steps.security.outcome }} |"
-            echo "| Backup and restore | ${{ steps.restore.outcome }} |"
+            echo "| Database | ${database} |"
+            echo "| RSpec and coverage | ${tests} |"
+            echo "| RuboCop | ${lint} |"
+            echo "| Brakeman | ${security} |"
+            echo "| Backup and restore | ${restore} |"
           } >> "${GITHUB_STEP_SUMMARY}"
-
-          test "${{ steps.database.outcome }}" = "success"
-          test "${{ steps.tests.outcome }}" = "success"
-          test "${{ steps.lint.outcome }}" = "success"
-          test "${{ steps.security.outcome }}" = "success"
-          test "${{ steps.restore.outcome }}" = "success"
+          printf 'Results: database=%s tests=%s lint=%s security=%s restore=%s\n' "${database}" "${tests}" "${lint}" "${security}" "${restore}"
+          test "${database}:${tests}:${lint}:${security}:${restore}" = "success:success:success:success:success"
 
   report:
     name: Publish gateway status
@@ -232,40 +226,33 @@ jobs:
     permissions:
       statuses: write
     steps:
-      - name: Publish sanitized result
+      - name: Publish sanitized results
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          VERIFY_RESULT: ${{ needs.verify.result }}
+          JOB_RESULT: ${{ needs.verify.result }}
+          DATABASE_RESULT: ${{ needs.verify.outputs.database }}
+          TEST_RESULT: ${{ needs.verify.outputs.tests }}
+          LINT_RESULT: ${{ needs.verify.outputs.lint }}
+          SECURITY_RESULT: ${{ needs.verify.outputs.security }}
+          RESTORE_RESULT: ${{ needs.verify.outputs.restore }}
         run: |
           set -euo pipefail
-
-          case "${VERIFY_RESULT}" in
-            success)
-              state="success"
-              description="Approved PashamCrafts commit passed verification"
-              ;;
-            failure)
-              state="failure"
-              description="Approved PashamCrafts commit failed verification"
-              ;;
-            *)
-              state="error"
-              description="PashamCrafts verification did not complete"
-              ;;
-          esac
-
-          payload="$(jq -n \
-            --arg state "${state}" \
-            --arg context "pashamcrafts/verification" \
-            --arg description "${description}" \
-            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
-
-          curl --fail-with-body --silent --show-error \
-            --request POST \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
-            --data "${payload}" > /dev/null
+          publish_status() {
+            local context="$1" result="$2" description="$3"
+            local state
+            case "${result}" in success) state=success;; failure) state=failure;; *) state=error;; esac
+            payload="$(jq -n --arg state "${state}" --arg context "${context}" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            curl --fail-with-body --silent --show-error --request POST \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+              --data "${payload}" > /dev/null
+          }
+          publish_status "pashamcrafts/database" "${DATABASE_RESULT}" "Database migration verification"
+          publish_status "pashamcrafts/tests" "${TEST_RESULT}" "RSpec and coverage verification"
+          publish_status "pashamcrafts/lint" "${LINT_RESULT}" "RuboCop verification"
+          publish_status "pashamcrafts/security" "${SECURITY_RESULT}" "Brakeman verification"
+          publish_status "pashamcrafts/restore" "${RESTORE_RESULT}" "Backup and restore verification"
+          publish_status "pashamcrafts/verification" "${JOB_RESULT}" "Combined approved-commit verification"
