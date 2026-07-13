@@ -41,7 +41,7 @@ jobs:
       - name: Generate current Brakeman lockfile
         working-directory: app
         run: |
-          bundle update brakeman --conservative
+          bundle lock --update brakeman
           grep -F "brakeman (8.0.5)" Gemfile.lock
       - name: Encrypt generated file
         working-directory: app
