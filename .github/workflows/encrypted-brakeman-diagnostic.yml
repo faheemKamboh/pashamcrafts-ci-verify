@@ -75,3 +75,25 @@ jobs:
           path: ${{ runner.temp }}/encrypted-brakeman
           retention-days: 1
           if-no-files-found: error
+
+  report:
+    if: always()
+    needs: diagnose
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ needs.diagnose.result }}
+        run: |
+          set -euo pipefail
+          case "${RESULT}" in success) state=success;; failure) state=failure;; *) state=error;; esac
+          payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/encrypted-brakeman" --arg description "Encrypted Brakeman report ${RESULT}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
