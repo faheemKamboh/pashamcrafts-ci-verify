@@ -90,10 +90,23 @@ jobs:
     if: always()
     needs: coverage
     runs-on: ubuntu-latest
+    permissions:
+      statuses: write
     steps:
-      - name: Expose sanitized coverage locations
+      - name: Publish sanitized coverage locations
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           COVERAGE_DETAIL: ${{ needs.coverage.outputs.detail }}
         run: |
-          printf 'COVERAGE_DETAIL=%s\n' "${COVERAGE_DETAIL:-unavailable}"
+          set -euo pipefail
+          detail="${COVERAGE_DETAIL:-unavailable}"
+          printf 'COVERAGE_DETAIL=%s\n' "${detail}"
+          description="$(printf '%s' "${detail}" | cut -c1-130)"
+          payload="$(jq -n --arg state success --arg context "pashamcrafts/coverage-detail" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
