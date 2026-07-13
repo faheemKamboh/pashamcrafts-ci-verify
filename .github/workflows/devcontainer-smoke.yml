@@ -64,38 +64,51 @@ jobs:
           path: app
 
       - name: Confirm exact checkout
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git -C app rev-parse HEAD)" = "${{ steps.target.outputs.target_sha }}"
+        run: test "$(git -C app rev-parse HEAD)" = "${{ steps.target.outputs.target_sha }}"
 
       - name: Install Dev Container CLI
         run: npm install --global @devcontainers/cli@0.87.0
 
       - name: Build and start the dev container
+        id: build
         working-directory: app
         run: devcontainer up --workspace-folder . --remove-existing-container --log-level info
 
       - name: Verify container exec
+        id: container_exec
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         run: devcontainer exec --workspace-folder . true
 
       - name: Verify Ruby
+        id: ruby
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         shell: bash
         run: devcontainer exec --workspace-folder . ruby --version | grep -F "ruby 4.0.1"
 
       - name: Verify Bundler
+        id: bundler
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         shell: bash
-        run: devcontainer exec --workspace-folder . bundle --version | grep -Fx "Bundler version 4.0.6"
+        run: devcontainer exec --workspace-folder . bundle --version | grep -F "Bundler version 4.0.6"
 
       - name: Verify non-root user
+        id: user
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         shell: bash
         run: devcontainer exec --workspace-folder . id -un | grep -Fx "vscode"
 
       - name: Verify environment and writable paths
+        id: environment
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -107,14 +120,23 @@ jobs:
           '
 
       - name: Verify GitHub CLI feature
+        id: github_cli
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         run: devcontainer exec --workspace-folder . gh --version
 
       - name: Verify Chromium
+        id: chromium
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         run: devcontainer exec --workspace-folder . chromium --version
 
       - name: Verify PostgreSQL and Rails development boot
+        id: rails
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -125,10 +147,16 @@ jobs:
           '
 
       - name: Verify TailwindCSS build
+        id: tailwind
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         run: devcontainer exec --workspace-folder . bin/rails tailwindcss:build
 
       - name: Verify test environment and RSpec
+        id: rspec
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -146,6 +174,9 @@ jobs:
           '
 
       - name: Verify RuboCop
+        id: rubocop
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -160,6 +191,24 @@ jobs:
             test "${status}" -eq 0
           '
 
+      - name: Enforce verification results
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.build.outcome }}" = success
+          test "${{ steps.container_exec.outcome }}" = success
+          test "${{ steps.ruby.outcome }}" = success
+          test "${{ steps.bundler.outcome }}" = success
+          test "${{ steps.user.outcome }}" = success
+          test "${{ steps.environment.outcome }}" = success
+          test "${{ steps.github_cli.outcome }}" = success
+          test "${{ steps.chromium.outcome }}" = success
+          test "${{ steps.rails.outcome }}" = success
+          test "${{ steps.tailwind.outcome }}" = success
+          test "${{ steps.rspec.outcome }}" = success
+          test "${{ steps.rubocop.outcome }}" = success
+
       - name: Publish summary
         if: always()
         run: |
@@ -168,7 +217,20 @@ jobs:
             echo
             echo "Target: `${{ steps.target.outputs.target_sha }}`"
             echo
-            echo "Build, lifecycle hooks, toolchain, PostgreSQL, Rails, TailwindCSS, RSpec, and RuboCop were exercised inside the exact dev container."
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Build and lifecycle | ${{ steps.build.outcome }} |"
+            echo "| Container exec | ${{ steps.container_exec.outcome }} |"
+            echo "| Ruby | ${{ steps.ruby.outcome }} |"
+            echo "| Bundler | ${{ steps.bundler.outcome }} |"
+            echo "| Non-root user | ${{ steps.user.outcome }} |"
+            echo "| Environment and paths | ${{ steps.environment.outcome }} |"
+            echo "| GitHub CLI | ${{ steps.github_cli.outcome }} |"
+            echo "| Chromium | ${{ steps.chromium.outcome }} |"
+            echo "| PostgreSQL and Rails | ${{ steps.rails.outcome }} |"
+            echo "| TailwindCSS | ${{ steps.tailwind.outcome }} |"
+            echo "| RSpec | ${{ steps.rspec.outcome }} |"
+            echo "| RuboCop | ${{ steps.rubocop.outcome }} |"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   report:
