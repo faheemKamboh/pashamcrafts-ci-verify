@@ -53,18 +53,19 @@ jobs:
         with:
           bundler-cache: true
           working-directory: app
-      - name: Generate schema from migrations
+      - name: Generate schema and exact diff
         working-directory: app
         run: |
           bundle exec rails db:create db:migrate
-          test -s db/schema.rb
-      - name: Encrypt generated schema
+          git diff --binary -- db/schema.rb > "${RUNNER_TEMP}/schema.patch"
+          test -s "${RUNNER_TEMP}/schema.patch"
+      - name: Encrypt generated schema and diff
         working-directory: app
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "${RUNNER_TEMP}/encrypted-export"
-          tar -czf "${RUNNER_TEMP}/generated-files.tar.gz" db/schema.rb
+          tar -czf "${RUNNER_TEMP}/generated-files.tar.gz" db/schema.rb -C "${RUNNER_TEMP}" schema.patch
           cat > "${RUNNER_TEMP}/export-public.pem" <<'PUBLIC_KEY'
           -----BEGIN PUBLIC KEY-----
           MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAvPwNhfUz9h2CQCGNF5t9
