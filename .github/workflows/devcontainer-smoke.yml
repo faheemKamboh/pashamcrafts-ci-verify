@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: pashamcrafts-devcontainer-verify
@@ -22,6 +23,25 @@ jobs:
     timeout-minutes: 45
 
     steps:
+      - name: Publish pending commit status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -n \
+            --arg state "pending" \
+            --arg context "pashamcrafts/devcontainer" \
+            --arg description "Dev container verification running" \
+            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
+
       - name: Checkout verification configuration
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
         with:
@@ -142,7 +162,7 @@ jobs:
     permissions:
       statuses: write
     steps:
-      - name: Publish commit status
+      - name: Publish final commit status
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
