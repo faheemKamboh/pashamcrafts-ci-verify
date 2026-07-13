@@ -127,17 +127,23 @@ jobs:
         working-directory: app
         run: devcontainer exec --workspace-folder . chromium --version
 
-      - name: Verify PostgreSQL and Rails development boot
-        id: rails
+      - name: Verify PostgreSQL readiness
+        id: postgres
         if: always() && steps.build.outcome == 'success'
         working-directory: app
-        shell: bash
-        run: |
-          devcontainer exec --workspace-folder . bash -lc '
-            set -euo pipefail
-            pg_isready -h db -U postgres -d pashamcrafts_development
-            bin/rails runner "abort(\"wrong Rails environment\") unless Rails.env.development?; abort(\"database unavailable\") unless ActiveRecord::Base.connection.active?; puts Rails.env"
-          '
+        run: devcontainer exec --workspace-folder . pg_isready -h db -U postgres -d pashamcrafts_development
+
+      - name: Verify Rails development environment
+        id: rails_environment
+        if: always() && steps.build.outcome == 'success'
+        working-directory: app
+        run: devcontainer exec --workspace-folder . bin/rails runner 'abort "wrong Rails environment" unless Rails.env.development?; puts Rails.env'
+
+      - name: Verify Active Record connection
+        id: active_record
+        if: always() && steps.build.outcome == 'success'
+        working-directory: app
+        run: devcontainer exec --workspace-folder . bin/rails runner 'abort "database unavailable" unless ActiveRecord::Base.connection.active?; puts ActiveRecord::Base.connection_db_config.database'
 
       - name: Verify TailwindCSS build
         id: tailwind
@@ -199,7 +205,9 @@ jobs:
             echo "| Environment and paths | ${{ steps.environment.outcome }} |"
             echo "| GitHub CLI | ${{ steps.github_cli.outcome }} |"
             echo "| Chromium | ${{ steps.chromium.outcome }} |"
-            echo "| PostgreSQL and Rails | ${{ steps.rails.outcome }} |"
+            echo "| PostgreSQL | ${{ steps.postgres.outcome }} |"
+            echo "| Rails development environment | ${{ steps.rails_environment.outcome }} |"
+            echo "| Active Record | ${{ steps.active_record.outcome }} |"
             echo "| TailwindCSS | ${{ steps.tailwind.outcome }} |"
             echo "| RSpec | ${{ steps.rspec.outcome }} |"
             echo "| RuboCop | ${{ steps.rubocop.outcome }} |"
