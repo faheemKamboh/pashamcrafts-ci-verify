@@ -68,15 +68,15 @@ jobs:
           tar -czf "${RUNNER_TEMP}/generated-files.tar.gz" db/schema.rb -C "${RUNNER_TEMP}" schema.patch
           cat > "${RUNNER_TEMP}/export-public.pem" <<'PUBLIC_KEY'
           -----BEGIN PUBLIC KEY-----
-          MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAvPwNhfUz9h2CQCGNF5t9
-          HzaXl7I1v+nTMKyNBiz8/xNhKM4mCLNhGMIvZlotgaSG+kCNqJBZ2bLBFm2Cabz2
-          Ds2u0UVdaSyAS2NWNg2HVFwb7Ls6x6fa/WATuRefMfb7Is27SSFibIldgV9uMadt
-          C5cFPup74cJP+rZpbwkESaWXs8gt1SNekiRvYkt9oXHqh6C5KlXhV6nXmcn0x8El
-          WqjypO4hEWSynjvV5Zdwihs3zwqomqvGSVWRgE9W6bUxbc51jtWEOstnxQfva8Kz
-          mPjHksG8TgPqASdGS6vzoqCvhz+GWWNhrtU2QCWaudYj4T14X954OQ/YOjBLVqdH
-          +wtirlpMGsN1kYosycgRMxygoljN9JvV9i2WE3WDxpS3sEHAVXLpNfxGiXMUkx52
-          NDND4QAqgNJBxIkgtx7iymLqppWTYjm3LwgM6fcfa5DsbSa2ljUsDRValau1ql3v
-          a5VMIBMBsmY9gqNN3F9waaB2hUlT5wsgQx/BZNq7BzhnAgMBAAE=
+          MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAq0+e4QuKjIqicH4FOmbg
+          5eLb+RBRGjLsf1hVj3DA2QscIiL3/35H07ZFeXXZ2akEfLYtX/lnLiIHihMxW/8B
+          xgMgXHETYzcGZ3JaRLLL8prAi1nPaYiajxFkiE2UevDKzE+5pmJ5CpIt+tB5L6Kq
+          3xay91hYitCdc7OLFQMt1yIzZZnbOAL4Sa3Zo1lVg8DMeQmyjwuN7AZSVkQOvbLa
+          QysHW4+IBP8E9N4B+3yspqbmh8bYum26wfTaD35LBQSUasmpQ7RMIu6bBeUmk898
+          2wNCOe0PTK3OyW9T9kGkzkYrE0PNW5rOx2U3IjgMud0g1+I6HxNA8llOn1xI0m6t
+          oZZOh7PsN1Gq/bfsdF91gZNfrlsglSqbfx8RJJWn8bcqF7jcxnos+h8nuQMrjIa0
+          WX7ogy9unowrcXS3ILle5bRQssggzsIZLOdnUV7QFMi43cr+ZFg1wo5rQP9vR7zg
+          tV+Gz9SXCRLZOevXhH4E8jqgTKg9RL1WcA+WG9ckmYU7AgMBAAE=
           -----END PUBLIC KEY-----
           PUBLIC_KEY
           openssl rand -hex 32 > "${RUNNER_TEMP}/export-passphrase"
