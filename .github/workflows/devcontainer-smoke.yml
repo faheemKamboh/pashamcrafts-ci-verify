@@ -51,7 +51,6 @@ jobs:
           target_sha="$(tr -d '[:space:]' < ci/devcontainer-target.sha)"
           [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
           echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
-          echo "Approved dev-container target: ${target_sha:0:12}"
 
       - name: Checkout exact PashamCrafts commit
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
@@ -76,39 +75,36 @@ jobs:
 
       - name: Verify container exec
         id: container_exec
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         run: devcontainer exec --workspace-folder . true
 
       - name: Verify Ruby
         id: ruby
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         shell: bash
         run: devcontainer exec --workspace-folder . ruby --version | grep -F "ruby 4.0.1"
 
       - name: Verify Bundler
         id: bundler
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         shell: bash
-        run: devcontainer exec --workspace-folder . bundle --version | grep -F "Bundler version 4.0.6"
+        run: |
+          devcontainer exec --workspace-folder . gem list bundler -i -v 4.0.6
+          devcontainer exec --workspace-folder . bundle _4.0.6_ --version
 
       - name: Verify non-root user
         id: user
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         shell: bash
         run: devcontainer exec --workspace-folder . id -un | grep -Fx "vscode"
 
       - name: Verify environment and writable paths
         id: environment
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         shell: bash
         run: |
@@ -121,22 +117,19 @@ jobs:
 
       - name: Verify GitHub CLI feature
         id: github_cli
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         run: devcontainer exec --workspace-folder . gh --version
 
       - name: Verify Chromium
         id: chromium
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         run: devcontainer exec --workspace-folder . chromium --version
 
       - name: Verify PostgreSQL and Rails development boot
         id: rails
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         shell: bash
         run: |
@@ -148,15 +141,13 @@ jobs:
 
       - name: Verify TailwindCSS build
         id: tailwind
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         run: devcontainer exec --workspace-folder . bin/rails tailwindcss:build
 
       - name: Verify test environment and RSpec
         id: rspec
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         shell: bash
         run: |
@@ -175,8 +166,7 @@ jobs:
 
       - name: Verify RuboCop
         id: rubocop
-        if: steps.build.outcome == 'success'
-        continue-on-error: true
+        if: always() && steps.build.outcome == 'success'
         working-directory: app
         shell: bash
         run: |
@@ -190,24 +180,6 @@ jobs:
             test -n "${summary}" && echo "RuboCop: ${summary}"
             test "${status}" -eq 0
           '
-
-      - name: Enforce verification results
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "${{ steps.build.outcome }}" = success
-          test "${{ steps.container_exec.outcome }}" = success
-          test "${{ steps.ruby.outcome }}" = success
-          test "${{ steps.bundler.outcome }}" = success
-          test "${{ steps.user.outcome }}" = success
-          test "${{ steps.environment.outcome }}" = success
-          test "${{ steps.github_cli.outcome }}" = success
-          test "${{ steps.chromium.outcome }}" = success
-          test "${{ steps.rails.outcome }}" = success
-          test "${{ steps.tailwind.outcome }}" = success
-          test "${{ steps.rspec.outcome }}" = success
-          test "${{ steps.rubocop.outcome }}" = success
 
       - name: Publish summary
         if: always()
