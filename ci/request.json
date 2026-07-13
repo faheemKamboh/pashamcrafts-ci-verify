@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-72-content-foundation-2",
-  "target_sha": "a2ffc7837323b73f889dbae5606c239aeee9b568",
+  "request_id": "issue-72-content-routing-1",
+  "target_sha": "08385ecae578f82302689d192f2925bee0030f70",
   "checks": [
     "targeted",
     "lint",
@@ -14,6 +14,9 @@
     "spec/models/slug_redirect_spec.rb",
     "spec/services/content/publish_page_spec.rb",
     "spec/services/seo/public_slug_resolver_spec.rb",
-    "spec/services/seo/slug_change_recorder_spec.rb"
+    "spec/services/seo/slug_change_recorder_spec.rb",
+    "spec/requests/admin/content_pages_spec.rb",
+    "spec/requests/content_pages_spec.rb",
+    "spec/requests/catalog_slug_routing_spec.rb"
   ]
 }
