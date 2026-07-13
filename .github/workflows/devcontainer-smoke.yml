@@ -1,0 +1,136 @@
+name: Verify PashamCrafts dev container
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "ci/devcontainer-target.sha"
+      - ".github/workflows/devcontainer-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pashamcrafts-devcontainer-verify
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Build and smoke-test dev container
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout verification configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate approved target
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_sha="$(tr -d '[:space:]' < ci/devcontainer-target.sha)"
+          if [[ ! "${target_sha}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid target SHA."
+            exit 1
+          fi
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+          echo "Approved dev-container target: ${target_sha:0:12}"
+
+      - name: Checkout exact PashamCrafts commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ steps.target.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ steps.target.outputs.target_sha }}"
+          actual="$(git -C app rev-parse HEAD)"
+          test "${actual}" = "${expected}"
+          echo "Checked out exact commit ${actual:0:12}."
+
+      - name: Install Dev Container CLI
+        shell: bash
+        run: npm install --global @devcontainers/cli@0.87.0
+
+      - name: Build and start the dev container
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          devcontainer up \
+            --workspace-folder . \
+            --remove-existing-container \
+            --log-level info
+
+      - name: Verify container runtime and Rails workflow
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          devcontainer exec --workspace-folder . bash -lc '
+            set -euo pipefail
+
+            test "$(ruby -e "print RUBY_VERSION")" = "4.0.1"
+            test "$(bundle --version)" = "Bundler version 4.0.6"
+            test "$(id -un)" = "vscode"
+            test -z "${RAILS_ENV:-}"
+            test -w /usr/local/bundle
+            test -w /workspaces/pashamcrafts
+
+            gh --version | head -n 1
+            chromium --version
+            pg_isready -h db -U postgres -d pashamcrafts_development
+
+            bin/rails runner "abort(\"wrong Rails environment\") unless Rails.env.development?; abort(\"database unavailable\") unless ActiveRecord::Base.connection.active?"
+
+            if bin/rails tailwindcss:build > /tmp/tailwind.log 2>&1; then
+              echo "TailwindCSS build: PASS"
+            else
+              echo "TailwindCSS build: FAIL"
+              exit 1
+            fi
+
+            RAILS_ENV=test bin/rails db:prepare > /tmp/test-database.log 2>&1
+
+            set +e
+            bundle exec rspec --format progress > /tmp/rspec.log 2>&1
+            rspec_status=$?
+            set -e
+            rspec_summary="$(grep -E "^[0-9]+ examples?, [0-9]+ failures?" /tmp/rspec.log | tail -n 1 || true)"
+            test -n "${rspec_summary}" && echo "RSpec: ${rspec_summary}"
+            test "${rspec_status}" -eq 0
+
+            set +e
+            bin/rubocop --format progress > /tmp/rubocop.log 2>&1
+            rubocop_status=$?
+            set -e
+            rubocop_summary="$(grep -E "[0-9]+ files? inspected" /tmp/rubocop.log | tail -n 1 || true)"
+            test -n "${rubocop_summary}" && echo "RuboCop: ${rubocop_summary}"
+            test "${rubocop_status}" -eq 0
+
+            echo "Dev container smoke test: PASS"
+          '
+
+      - name: Publish summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## PashamCrafts dev-container verification"
+            echo
+            echo "Target: `${{ steps.target.outputs.target_sha }}`"
+            echo
+            echo "The workflow builds the exact `.devcontainer` configuration, executes lifecycle hooks, checks the non-root runtime, PostgreSQL connectivity, Rails development and test environments, TailwindCSS, RSpec, and RuboCop."
+          } >> "${GITHUB_STEP_SUMMARY}"
