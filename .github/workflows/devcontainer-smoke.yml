@@ -29,12 +29,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          payload="$(jq -n \
-            --arg state "pending" \
-            --arg context "pashamcrafts/devcontainer" \
-            --arg description "Dev container verification running" \
-            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          payload="$(jq -n --arg state pending --arg context pashamcrafts/devcontainer --arg description "Dev container verification running" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
           curl --fail-with-body --silent --show-error --request POST \
             --header "Authorization: Bearer ${GH_TOKEN}" \
             --header "Accept: application/vnd.github+json" \
@@ -54,10 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           target_sha="$(tr -d '[:space:]' < ci/devcontainer-target.sha)"
-          if [[ ! "${target_sha}" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Invalid target SHA."
-            exit 1
-          fi
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
           echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
           echo "Approved dev-container target: ${target_sha:0:12}"
 
@@ -75,47 +67,57 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          expected="${{ steps.target.outputs.target_sha }}"
-          actual="$(git -C app rev-parse HEAD)"
-          test "${actual}" = "${expected}"
-          echo "Checked out exact commit ${actual:0:12}."
+          test "$(git -C app rev-parse HEAD)" = "${{ steps.target.outputs.target_sha }}"
 
       - name: Install Dev Container CLI
-        shell: bash
         run: npm install --global @devcontainers/cli@0.87.0
 
       - name: Build and start the dev container
         working-directory: app
-        shell: bash
-        run: |
-          set -euo pipefail
-          devcontainer up \
-            --workspace-folder . \
-            --remove-existing-container \
-            --log-level info
+        run: devcontainer up --workspace-folder . --remove-existing-container --log-level info
 
-      - name: Verify runtime identity and toolchain
+      - name: Verify container exec
+        working-directory: app
+        run: devcontainer exec --workspace-folder . true
+
+      - name: Verify Ruby
+        working-directory: app
+        shell: bash
+        run: devcontainer exec --workspace-folder . ruby --version | grep -F "ruby 4.0.1"
+
+      - name: Verify Bundler
+        working-directory: app
+        shell: bash
+        run: devcontainer exec --workspace-folder . bundle --version | grep -Fx "Bundler version 4.0.6"
+
+      - name: Verify non-root user
+        working-directory: app
+        shell: bash
+        run: devcontainer exec --workspace-folder . id -un | grep -Fx "vscode"
+
+      - name: Verify environment and writable paths
         working-directory: app
         shell: bash
         run: |
-          set -euo pipefail
           devcontainer exec --workspace-folder . bash -lc '
             set -euo pipefail
-            ruby --version | grep -F "ruby 4.0.1"
-            bundle --version | grep -Fx "Bundler version 4.0.6"
-            id -un | grep -Fx "vscode"
             test -z "${RAILS_ENV:-}"
             test -w /usr/local/bundle
             test -w /workspaces/pashamcrafts
-            gh --version
-            chromium --version
           '
+
+      - name: Verify GitHub CLI feature
+        working-directory: app
+        run: devcontainer exec --workspace-folder . gh --version
+
+      - name: Verify Chromium
+        working-directory: app
+        run: devcontainer exec --workspace-folder . chromium --version
 
       - name: Verify PostgreSQL and Rails development boot
         working-directory: app
         shell: bash
         run: |
-          set -euo pipefail
           devcontainer exec --workspace-folder . bash -lc '
             set -euo pipefail
             pg_isready -h db -U postgres -d pashamcrafts_development
@@ -124,19 +126,12 @@ jobs:
 
       - name: Verify TailwindCSS build
         working-directory: app
-        shell: bash
-        run: |
-          set -euo pipefail
-          devcontainer exec --workspace-folder . bash -lc '
-            set -euo pipefail
-            bin/rails tailwindcss:build
-          '
+        run: devcontainer exec --workspace-folder . bin/rails tailwindcss:build
 
       - name: Verify test environment and RSpec
         working-directory: app
         shell: bash
         run: |
-          set -euo pipefail
           devcontainer exec --workspace-folder . bash -lc '
             set -euo pipefail
             test -z "${RAILS_ENV:-}"
@@ -154,7 +149,6 @@ jobs:
         working-directory: app
         shell: bash
         run: |
-          set -euo pipefail
           devcontainer exec --workspace-folder . bash -lc '
             set -euo pipefail
             set +e
@@ -168,14 +162,13 @@ jobs:
 
       - name: Publish summary
         if: always()
-        shell: bash
         run: |
           {
             echo "## PashamCrafts dev-container verification"
             echo
             echo "Target: `${{ steps.target.outputs.target_sha }}`"
             echo
-            echo "The workflow builds the exact `.devcontainer` configuration, executes lifecycle hooks, checks the non-root runtime, PostgreSQL connectivity, Rails development and test environments, TailwindCSS, RSpec, and RuboCop."
+            echo "Build, lifecycle hooks, toolchain, PostgreSQL, Rails, TailwindCSS, RSpec, and RuboCop were exercised inside the exact dev container."
           } >> "${GITHUB_STEP_SUMMARY}"
 
   report:
@@ -197,12 +190,7 @@ jobs:
             failure) state=failure ;;
             *) state=error ;;
           esac
-          payload="$(jq -n \
-            --arg state "${state}" \
-            --arg context "pashamcrafts/devcontainer" \
-            --arg description "Dev container verification ${RESULT}" \
-            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          payload="$(jq -n --arg state "${state}" --arg context pashamcrafts/devcontainer --arg description "Dev container verification ${RESULT}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
           curl --fail-with-body --silent --show-error --request POST \
             --header "Authorization: Bearer ${GH_TOKEN}" \
             --header "Accept: application/vnd.github+json" \
