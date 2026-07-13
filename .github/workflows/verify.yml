@@ -1,0 +1,225 @@
+name: Verify approved commit
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "ci/target.sha"
+      - ".github/workflows/verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pashamcrafts-ci-verify
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: PashamCrafts verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+
+    steps:
+      - name: Checkout verification configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate approved target
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_sha="$(tr -d '[:space:]' < ci/target.sha)"
+          if [[ ! "${target_sha}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid target SHA."
+            exit 1
+          fi
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+          echo "Approved target: ${target_sha:0:12}"
+
+      - name: Checkout approved PashamCrafts commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ steps.target.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ steps.target.outputs.target_sha }}"
+          actual="$(git -C app rev-parse HEAD)"
+          test "${actual}" = "${expected}"
+          echo "Checked out approved commit ${actual:0:12}."
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips postgresql-client
+
+      - name: Set up Ruby and gems
+        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+          working-directory: app
+
+      - name: Prepare test database
+        id: database
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bundle exec rails db:create db:migrate > "${RUNNER_TEMP}/database.log" 2>&1
+          status=$?
+          if [ "${status}" -eq 0 ]; then
+            echo "Database preparation: PASS"
+          else
+            echo "Database preparation: FAIL"
+          fi
+          exit "${status}"
+
+      - name: Run RSpec and enforce coverage
+        id: tests
+        if: steps.database.outcome == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bundle exec rspec --format progress > "${RUNNER_TEMP}/rspec.log" 2>&1
+          test_status=$?
+          summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/rspec.log" | tail -n 1 || true)"
+          coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/rspec.log" | tail -n 1 | awk '{print $3}' || true)"
+
+          [ -n "${summary}" ] && echo "RSpec: ${summary}" || echo "RSpec completed without a parseable summary."
+          [ -n "${coverage}" ] && echo "Line coverage: ${coverage}%" || echo "Line coverage was not reported."
+
+          coverage_status=1
+          if [ -n "${coverage}" ]; then
+            awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
+            coverage_status=$?
+          fi
+
+          if [ "${test_status}" -eq 0 ] && [ "${coverage_status}" -eq 0 ]; then
+            echo "RSpec and coverage: PASS"
+            exit 0
+          fi
+
+          echo "RSpec or coverage: FAIL"
+          exit 1
+
+      - name: Run RuboCop
+        id: lint
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bin/rubocop --format progress > "${RUNNER_TEMP}/rubocop.log" 2>&1
+          status=$?
+          summary="$(grep -E '[0-9]+ files? inspected' "${RUNNER_TEMP}/rubocop.log" | tail -n 1 || true)"
+          [ -n "${summary}" ] && echo "RuboCop: ${summary}"
+          if [ "${status}" -eq 0 ]; then
+            echo "RuboCop: PASS"
+          else
+            echo "RuboCop: FAIL"
+          fi
+          exit "${status}"
+
+      - name: Run Brakeman
+        id: security
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bin/brakeman --no-pager -q > "${RUNNER_TEMP}/brakeman.log" 2>&1
+          status=$?
+          if [ "${status}" -eq 0 ]; then
+            echo "Brakeman: PASS"
+          else
+            echo "Brakeman: FAIL"
+          fi
+          exit "${status}"
+
+      - name: Run backup and restore drill
+        id: restore
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        env:
+          DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_backup_source
+          RESTORE_DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_restore_test
+          BACKUP_DIR: ${{ runner.temp }}/backup-drill
+          ALLOW_DESTRUCTIVE_RESTORE: "true"
+          PGPASSWORD: password
+        run: |
+          set +e
+          {
+            bundle exec rails db:create db:migrate &&
+            bundle exec rails runner 'Audit::Recorder.record!(action: "backup.restore_drill")' &&
+            bin/backup_database &&
+            createdb --host=localhost --username=postgres pashamcrafts_restore_test &&
+            export BACKUP_FILE="$(find "${BACKUP_DIR}" -name '*.dump' -type f | head -n 1)" &&
+            test -n "${BACKUP_FILE}" &&
+            bin/verify_database_restore &&
+            test "$(psql "${RESTORE_DATABASE_URL}" -Atqc "SELECT COUNT(*) FROM audit_events WHERE action = 'backup.restore_drill'")" = "1"
+          } > "${RUNNER_TEMP}/restore.log" 2>&1
+          status=$?
+          if [ "${status}" -eq 0 ]; then
+            echo "Backup and restore: PASS"
+          else
+            echo "Backup and restore: FAIL"
+          fi
+          exit "${status}"
+
+      - name: Publish verification summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## PashamCrafts verification"
+            echo
+            echo "Target: `${{ steps.target.outputs.target_sha }}`"
+            echo
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Database | ${{ steps.database.outcome }} |"
+            echo "| RSpec and coverage | ${{ steps.tests.outcome }} |"
+            echo "| RuboCop | ${{ steps.lint.outcome }} |"
+            echo "| Brakeman | ${{ steps.security.outcome }} |"
+            echo "| Backup and restore | ${{ steps.restore.outcome }} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          test "${{ steps.database.outcome }}" = "success"
+          test "${{ steps.tests.outcome }}" = "success"
+          test "${{ steps.lint.outcome }}" = "success"
+          test "${{ steps.security.outcome }}" = "success"
+          test "${{ steps.restore.outcome }}" = "success"
