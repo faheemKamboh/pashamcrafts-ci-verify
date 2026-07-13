@@ -21,6 +21,7 @@ jobs:
     timeout-minutes: 35
     outputs:
       database: ${{ steps.database.outputs.result }}
+      schema: ${{ steps.schema.outputs.result }}
       tests: ${{ steps.tests.outputs.result }}
       lint: ${{ steps.lint.outputs.result }}
       security: ${{ steps.security.outputs.result }}
@@ -104,6 +105,21 @@ jobs:
           echo "Database preparation: ${result^^}"
           exit "${status}"
 
+      - name: Verify committed schema
+        id: schema
+        if: steps.database.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          git diff --quiet -- db/schema.rb
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Committed schema: ${result^^}"
+          exit "${status}"
+
       - name: Run RSpec and enforce coverage
         id: tests
         if: steps.database.outputs.result == 'success'
@@ -150,7 +166,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          bin/brakeman --no-pager -q > "${RUNNER_TEMP}/brakeman.log" 2>&1
+          bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error > "${RUNNER_TEMP}/brakeman.log" 2>&1
           status=$?
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
@@ -191,6 +207,7 @@ jobs:
         shell: bash
         env:
           DATABASE_RESULT: ${{ steps.database.outputs.result }}
+          SCHEMA_RESULT: ${{ steps.schema.outputs.result }}
           TEST_RESULT: ${{ steps.tests.outputs.result }}
           LINT_RESULT: ${{ steps.lint.outputs.result }}
           SECURITY_RESULT: ${{ steps.security.outputs.result }}
@@ -198,6 +215,7 @@ jobs:
         run: |
           set -euo pipefail
           database="${DATABASE_RESULT:-error}"
+          schema="${SCHEMA_RESULT:-error}"
           tests="${TEST_RESULT:-error}"
           lint="${LINT_RESULT:-error}"
           security="${SECURITY_RESULT:-error}"
@@ -210,13 +228,14 @@ jobs:
             echo "| Check | Result |"
             echo "|---|---|"
             echo "| Database | ${database} |"
+            echo "| Committed schema | ${schema} |"
             echo "| RSpec and coverage | ${tests} |"
             echo "| RuboCop | ${lint} |"
             echo "| Brakeman | ${security} |"
             echo "| Backup and restore | ${restore} |"
           } >> "${GITHUB_STEP_SUMMARY}"
-          printf 'Results: database=%s tests=%s lint=%s security=%s restore=%s\n' "${database}" "${tests}" "${lint}" "${security}" "${restore}"
-          test "${database}:${tests}:${lint}:${security}:${restore}" = "success:success:success:success:success"
+          printf 'Results: database=%s schema=%s tests=%s lint=%s security=%s restore=%s\n' "${database}" "${schema}" "${tests}" "${lint}" "${security}" "${restore}"
+          test "${database}:${schema}:${tests}:${lint}:${security}:${restore}" = "success:success:success:success:success:success"
 
   report:
     name: Publish gateway status
@@ -232,6 +251,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           JOB_RESULT: ${{ needs.verify.result }}
           DATABASE_RESULT: ${{ needs.verify.outputs.database }}
+          SCHEMA_RESULT: ${{ needs.verify.outputs.schema }}
           TEST_RESULT: ${{ needs.verify.outputs.tests }}
           LINT_RESULT: ${{ needs.verify.outputs.lint }}
           SECURITY_RESULT: ${{ needs.verify.outputs.security }}
@@ -239,8 +259,7 @@ jobs:
         run: |
           set -euo pipefail
           publish_status() {
-            local context="$1" result="$2" description="$3"
-            local state
+            local context="$1" result="$2" description="$3" state
             case "${result}" in success) state=success;; failure) state=failure;; *) state=error;; esac
             payload="$(jq -n --arg state "${state}" --arg context "${context}" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
             curl --fail-with-body --silent --show-error --request POST \
@@ -251,8 +270,9 @@ jobs:
               --data "${payload}" > /dev/null
           }
           publish_status "pashamcrafts/database" "${DATABASE_RESULT}" "Database migration verification"
+          publish_status "pashamcrafts/schema" "${SCHEMA_RESULT}" "Committed schema consistency"
           publish_status "pashamcrafts/tests" "${TEST_RESULT}" "RSpec and coverage verification"
           publish_status "pashamcrafts/lint" "${LINT_RESULT}" "RuboCop verification"
-          publish_status "pashamcrafts/security" "${SECURITY_RESULT}" "Brakeman verification"
+          publish_status "pashamcrafts/security" "${SECURITY_RESULT}" "Brakeman warning/error scan"
           publish_status "pashamcrafts/restore" "${RESTORE_RESULT}" "Backup and restore verification"
           publish_status "pashamcrafts/verification" "${JOB_RESULT}" "Combined approved-commit verification"
