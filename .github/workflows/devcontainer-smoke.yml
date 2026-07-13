@@ -134,3 +134,35 @@ jobs:
             echo
             echo "The workflow builds the exact `.devcontainer` configuration, executes lifecycle hooks, checks the non-root runtime, PostgreSQL connectivity, Rails development and test environments, TailwindCSS, RSpec, and RuboCop."
           } >> "${GITHUB_STEP_SUMMARY}"
+
+  report:
+    if: always()
+    needs: smoke
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - name: Publish commit status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ needs.smoke.result }}
+        run: |
+          set -euo pipefail
+          case "${RESULT}" in
+            success) state=success ;;
+            failure) state=failure ;;
+            *) state=error ;;
+          esac
+          payload="$(jq -n \
+            --arg state "${state}" \
+            --arg context "pashamcrafts/devcontainer" \
+            --arg description "Dev container verification ${RESULT}" \
+            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
