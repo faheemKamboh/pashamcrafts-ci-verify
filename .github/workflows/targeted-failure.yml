@@ -1,4 +1,4 @@
-name: Diagnose inventory movement example
+name: Diagnose inventory receipt example
 
 on:
   push:
@@ -67,7 +67,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          bundle exec rspec spec/models/inventory_movement_spec.rb:20 --format documentation > "${RUNNER_TEMP}/targeted.log" 2>&1
+          bundle exec rspec spec/services/inventory/ledger_spec.rb:19 --format documentation > "${RUNNER_TEMP}/targeted.log" 2>&1
           status=$?
           if [ "${status}" -eq 0 ]; then
             result=success
