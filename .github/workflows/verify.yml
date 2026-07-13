@@ -207,7 +207,7 @@ jobs:
           {
             echo "## PashamCrafts verification"
             echo
-            echo "Target: `${{ steps.target.outputs.target_sha }}`"
+            printf 'Target: `%s`\n' "${{ steps.target.outputs.target_sha }}"
             echo
             echo "| Check | Result |"
             echo "|---|---|"
