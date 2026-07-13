@@ -63,3 +63,26 @@ jobs:
           remote_sha="$(git ls-remote origin "refs/heads/${TARGET_BRANCH}" | cut -f1)"
           test "${remote_sha}" = "${EXPECTED_SHA}"
           git push origin "HEAD:refs/heads/${TARGET_BRANCH}"
+
+  report:
+    if: always()
+    needs: push-schema
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - name: Publish schema-push result
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ needs.push-schema.result }}
+        run: |
+          set -euo pipefail
+          case "${RESULT}" in success) state=success;; failure) state=failure;; *) state=error;; esac
+          payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/schema-push" --arg description "Exact schema push ${RESULT}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
