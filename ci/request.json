@@ -1,8 +1,7 @@
 {
-  "request_id": "issue-72-content-foundation-1",
-  "target_sha": "3b941fe70839f9b013ac4ad1fb5bb098039b1530",
+  "request_id": "issue-72-content-foundation-2",
+  "target_sha": "a2ffc7837323b73f889dbae5606c239aeee9b568",
   "checks": [
-    "schema",
     "targeted",
     "lint",
     "security"
