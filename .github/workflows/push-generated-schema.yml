@@ -1,0 +1,65 @@
+name: Push exact generated schema
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/push-generated-schema.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  push-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_schema_push
+      EXPECTED_SHA: 1ec31008ef31183b9587521acc9d6631fe217135
+      TARGET_BRANCH: feature/issue-70-stock-behavior
+    steps:
+      - uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ env.EXPECTED_SHA }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Verify feature branch has not moved
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+          remote_sha="$(git ls-remote origin "refs/heads/${TARGET_BRANCH}" | cut -f1)"
+          test "${remote_sha}" = "${EXPECTED_SHA}"
+      - uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+      - name: Generate exact PostgreSQL schema
+        run: bundle exec rails db:create db:migrate
+      - name: Commit and push schema only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code --quiet -- db/schema.rb && exit 0
+          test -z "$(git status --short | grep -v '^ M db/schema.rb$' || true)"
+          git config user.name "PashamCrafts Verification"
+          git config user.email "actions@users.noreply.github.com"
+          git add db/schema.rb
+          git commit -m "Commit generated availability request schema"
+          remote_sha="$(git ls-remote origin "refs/heads/${TARGET_BRANCH}" | cut -f1)"
+          test "${remote_sha}" = "${EXPECTED_SHA}"
+          git push origin "HEAD:refs/heads/${TARGET_BRANCH}"
