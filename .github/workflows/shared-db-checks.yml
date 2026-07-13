@@ -1,0 +1,279 @@
+name: Shared database-backed PashamCrafts checks
+
+on:
+  workflow_call:
+    inputs:
+      request_id:
+        required: true
+        type: string
+      target_sha:
+        required: true
+        type: string
+      run_schema:
+        required: false
+        default: false
+        type: boolean
+      run_tests:
+        required: false
+        default: false
+        type: boolean
+      run_targeted:
+        required: false
+        default: false
+        type: boolean
+      run_restore:
+        required: false
+        default: false
+        type: boolean
+      specs_json:
+        required: false
+        default: "[]"
+        type: string
+    secrets:
+      PASHAMCRAFTS_READ_TOKEN:
+        required: true
+    outputs:
+      result:
+        value: ${{ jobs.checks.outputs.result }}
+      schema_result:
+        value: ${{ jobs.checks.outputs.schema_result }}
+      tests_result:
+        value: ${{ jobs.checks.outputs.tests_result }}
+      targeted_result:
+        value: ${{ jobs.checks.outputs.targeted_result }}
+      restore_result:
+        value: ${{ jobs.checks.outputs.restore_result }}
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Rails database checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      result: ${{ steps.collect.outputs.result }}
+      schema_result: ${{ steps.collect.outputs.schema_result }}
+      tests_result: ${{ steps.collect.outputs.tests_result }}
+      targeted_result: ${{ steps.collect.outputs.targeted_result }}
+      restore_result: ${{ steps.collect.outputs.restore_result }}
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+
+    steps:
+      - name: Checkout verification configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Checkout exact PashamCrafts commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ inputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        run: test "$(git -C app rev-parse HEAD)" = "${{ inputs.target_sha }}"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips postgresql-client
+
+      - name: Set up Ruby and gems
+        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+          working-directory: app
+
+      - name: Prepare test database
+        id: database
+        if: inputs.run_schema || inputs.run_tests || inputs.run_targeted
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bundle exec rails db:create db:migrate > "${RUNNER_TEMP}/database.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Database preparation: ${result^^}"
+          exit "${status}"
+
+      - name: Verify committed schema
+        id: schema
+        if: inputs.run_schema && steps.database.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          git diff -- db/schema.rb > "${RUNNER_TEMP}/schema.diff"
+          git diff --quiet -- db/schema.rb
+          status=$?
+          if [ "${status}" -ne 0 ]; then cp db/schema.rb "${RUNNER_TEMP}/generated-schema.rb"; fi
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Committed schema: ${result^^}"
+          exit "${status}"
+
+      - name: Run complete RSpec suite and enforce coverage
+        id: tests
+        if: inputs.run_tests && steps.database.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bundle exec rspec --format progress > "${RUNNER_TEMP}/rspec.log" 2>&1
+          command_status=$?
+          summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/rspec.log" | tail -n 1 || true)"
+          coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/rspec.log" | tail -n 1 | awk '{print $3}' || true)"
+          coverage_status=1
+          if [ -n "${coverage}" ]; then
+            awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
+            coverage_status=$?
+          fi
+          if [ "${command_status}" -eq 0 ] && [ "${coverage_status}" -eq 0 ]; then result=success; else result=failure; fi
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          [ -n "${summary}" ] && echo "RSpec: ${summary}" || echo "RSpec summary unavailable."
+          [ -n "${coverage}" ] && echo "Line coverage: ${coverage}%" || echo "Line coverage unavailable."
+          exit $([ "${result}" = success ] && echo 0 || echo 1)
+
+      - name: Run targeted RSpec examples
+        id: targeted
+        if: inputs.run_targeted && steps.database.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        env:
+          SPECS_JSON: ${{ inputs.specs_json }}
+        run: |
+          set +e
+          mapfile -t specs < <(jq -r '.[]' <<< "${SPECS_JSON}")
+          for spec in "${specs[@]}"; do
+            path="${spec%%:*}"
+            [ -f "${path}" ] || { echo "Requested spec does not exist."; exit 2; }
+          done
+          bundle exec rspec "${specs[@]}" --format progress > "${RUNNER_TEMP}/targeted-rspec.log" 2>&1
+          command_status=$?
+          summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/targeted-rspec.log" | tail -n 1 || true)"
+          if printf '%s' "${summary}" | grep -Eq '^[0-9]+ examples?, 0 failures?'; then result=success; else result=failure; fi
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          [ -n "${summary}" ] && echo "Targeted RSpec: ${summary}" || echo "Targeted RSpec summary unavailable; command status ${command_status}."
+          exit $([ "${result}" = success ] && echo 0 || echo 1)
+
+      - name: Run backup and restore drill
+        id: restore
+        if: inputs.run_restore
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        env:
+          DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_backup_source
+          RESTORE_DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_restore_test
+          BACKUP_DIR: ${{ runner.temp }}/backup-drill
+          ALLOW_DESTRUCTIVE_RESTORE: "true"
+          PGPASSWORD: password
+        run: |
+          set +e
+          {
+            bundle exec rails db:create db:migrate &&
+            bundle exec rails runner 'Audit::Recorder.record!(action: "backup.restore_drill")' &&
+            bin/backup_database &&
+            createdb --host=localhost --username=postgres pashamcrafts_restore_test &&
+            export BACKUP_FILE="$(find "${BACKUP_DIR}" -name '*.dump' -type f | head -n 1)" &&
+            test -n "${BACKUP_FILE}" &&
+            bin/verify_database_restore &&
+            test "$(psql "${RESTORE_DATABASE_URL}" -Atqc "SELECT COUNT(*) FROM audit_events WHERE action = 'backup.restore_drill'")" = "1"
+          } > "${RUNNER_TEMP}/restore.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Backup and restore: ${result^^}"
+          exit "${status}"
+
+      - name: Collect database-backed results
+        id: collect
+        if: always()
+        shell: bash
+        env:
+          DATABASE_RESULT: ${{ steps.database.outputs.result }}
+          SCHEMA_RESULT: ${{ steps.schema.outputs.result }}
+          TESTS_RESULT: ${{ steps.tests.outputs.result }}
+          TARGETED_RESULT: ${{ steps.targeted.outputs.result }}
+          RESTORE_RESULT: ${{ steps.restore.outputs.result }}
+        run: |
+          set -euo pipefail
+          schema="${SCHEMA_RESULT:-skipped}"
+          tests="${TESTS_RESULT:-skipped}"
+          targeted="${TARGETED_RESULT:-skipped}"
+          restore="${RESTORE_RESULT:-skipped}"
+          result=success
+
+          require_check() { local enabled="$1" value="$2"; [ "${enabled}" = false ] || [ "${value}" = success ] || result=failure; }
+
+          database="${DATABASE_RESULT:-skipped}"
+          if [ "${{ inputs.run_schema || inputs.run_tests || inputs.run_targeted }}" = true ] && [ "${database}" != success ]; then
+            result=failure
+            [ "${{ inputs.run_schema }}" = false ] || schema=failure
+            [ "${{ inputs.run_tests }}" = false ] || tests=failure
+            [ "${{ inputs.run_targeted }}" = false ] || targeted=failure
+          fi
+
+          require_check "${{ inputs.run_schema }}" "${schema}"
+          require_check "${{ inputs.run_tests }}" "${tests}"
+          require_check "${{ inputs.run_targeted }}" "${targeted}"
+          require_check "${{ inputs.run_restore }}" "${restore}"
+
+          {
+            echo "result=${result}"
+            echo "schema_result=${schema}"
+            echo "tests_result=${tests}"
+            echo "targeted_result=${targeted}"
+            echo "restore_result=${restore}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Encrypt database diagnostics
+        if: always() && steps.collect.outputs.result != 'success'
+        shell: bash
+        run: |
+          bash ci/encrypt-diagnostics.sh \
+            "${RUNNER_TEMP}/encrypted-db-diagnostics" \
+            "${RUNNER_TEMP}/database.log" \
+            "${RUNNER_TEMP}/schema.diff" \
+            "${RUNNER_TEMP}/generated-schema.rb" \
+            "${RUNNER_TEMP}/rspec.log" \
+            "${RUNNER_TEMP}/targeted-rspec.log" \
+            "${RUNNER_TEMP}/restore.log"
+
+      - name: Upload encrypted database diagnostics
+        if: always() && steps.collect.outputs.result != 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: encrypted-db-${{ inputs.request_id }}
+          path: ${{ runner.temp }}/encrypted-db-diagnostics
+          retention-days: 1
+          if-no-files-found: error

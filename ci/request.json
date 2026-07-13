@@ -1,6 +1,8 @@
 {
-  "request_id": "bootstrap-explicit-dispatch",
+  "request_id": "shared-security-bootstrap",
   "target_sha": "be7c444bc559fc2926f8bb862cc2a3d342419be1",
-  "profile": "security",
+  "checks": [
+    "security"
+  ],
   "specs": []
 }

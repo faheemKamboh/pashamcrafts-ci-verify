@@ -1,63 +1,54 @@
-name: Verify approved PashamCrafts commit
+name: Dispatch approved PashamCrafts checks
 
 on:
   workflow_dispatch:
     inputs:
+      request_id:
+        description: Unique request identifier
+        required: false
+        type: string
       target_sha:
         description: Exact PashamCrafts commit SHA
         required: true
         type: string
-      profile:
-        description: Allowlisted verification profile
+      checks:
+        description: Comma-separated checks, or full
         required: true
-        type: choice
-        options:
-          - full
-          - targeted
-          - schema
-          - lint
-          - security
-          - restore
+        default: full
+        type: string
       specs:
-        description: Comma- or newline-separated spec paths for the targeted profile
+        description: Comma- or newline-separated spec paths when targeted is requested
         required: false
         type: string
   push:
     branches: [main]
     paths:
       - "ci/request.json"
+      - "ci/encrypt-diagnostics.sh"
       - ".github/workflows/verify.yml"
+      - ".github/workflows/shared-db-checks.yml"
+      - ".github/workflows/shared-static-checks.yml"
 
 permissions:
   contents: read
 
 jobs:
-  verify:
-    name: PashamCrafts explicit verification
+  resolve:
+    name: Resolve explicit request
     runs-on: ubuntu-latest
-    timeout-minutes: 40
     outputs:
+      request_id: ${{ steps.request.outputs.request_id }}
       target_sha: ${{ steps.request.outputs.target_sha }}
-      profile: ${{ steps.request.outputs.profile }}
-      result: ${{ steps.result.outputs.result }}
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      RAILS_ENV: test
-      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
-
+      checks_json: ${{ steps.request.outputs.checks_json }}
+      specs_json: ${{ steps.request.outputs.specs_json }}
+      run_db: ${{ steps.request.outputs.run_db }}
+      run_schema: ${{ steps.request.outputs.run_schema }}
+      run_tests: ${{ steps.request.outputs.run_tests }}
+      run_targeted: ${{ steps.request.outputs.run_targeted }}
+      run_restore: ${{ steps.request.outputs.run_restore }}
+      run_static: ${{ steps.request.outputs.run_static }}
+      run_lint: ${{ steps.request.outputs.run_lint }}
+      run_security: ${{ steps.request.outputs.run_security }}
     steps:
       - name: Checkout verification configuration
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
@@ -65,360 +56,212 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Resolve and validate explicit request
+      - name: Resolve and validate request
         id: request
         shell: bash
         env:
+          DISPATCH_REQUEST_ID: ${{ inputs.request_id }}
           DISPATCH_TARGET_SHA: ${{ inputs.target_sha }}
-          DISPATCH_PROFILE: ${{ inputs.profile }}
+          DISPATCH_CHECKS: ${{ inputs.checks }}
           DISPATCH_SPECS: ${{ inputs.specs }}
         run: |
           set -euo pipefail
-          specs_file="${RUNNER_TEMP}/requested-specs.txt"
+          checks_file="${RUNNER_TEMP}/checks.txt"
+          specs_file="${RUNNER_TEMP}/specs.txt"
+          : > "${checks_file}"
           : > "${specs_file}"
 
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            request_id="${DISPATCH_REQUEST_ID:-manual-${GITHUB_RUN_ID}}"
             target_sha="${DISPATCH_TARGET_SHA}"
-            profile="${DISPATCH_PROFILE}"
+            printf '%s\n' "${DISPATCH_CHECKS}" | tr ',' '\n' > "${checks_file}"
             printf '%s\n' "${DISPATCH_SPECS}" | tr ',' '\n' > "${specs_file}"
           else
+            request_id="$(jq -er '.request_id' ci/request.json)"
             target_sha="$(jq -er '.target_sha' ci/request.json)"
-            profile="$(jq -er '.profile' ci/request.json)"
+            jq -r '.checks[]?' ci/request.json > "${checks_file}"
             jq -r '.specs[]?' ci/request.json > "${specs_file}"
           fi
 
+          [[ "${request_id}" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || { echo "Invalid request identifier."; exit 1; }
           [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid target SHA."; exit 1; }
-          case "${profile}" in
-            full|targeted|schema|lint|security|restore) ;;
-            *) echo "Unsupported verification profile."; exit 1 ;;
-          esac
 
-          normalized="${RUNNER_TEMP}/normalized-specs.txt"
-          : > "${normalized}"
-          count=0
-          while IFS= read -r spec; do
-            spec="$(printf '%s' "${spec}" | xargs)"
-            [ -z "${spec}" ] && continue
-            [[ "${spec}" =~ ^spec/[A-Za-z0-9_./-]+(:[0-9]+)?$ ]] || {
-              echo "Invalid targeted spec reference."
-              exit 1
-            }
-            printf '%s\n' "${spec}" >> "${normalized}"
-            count=$((count + 1))
-          done < "${specs_file}"
+          normalized_checks="${RUNNER_TEMP}/normalized-checks.txt"
+          : > "${normalized_checks}"
+          while IFS= read -r check; do
+            check="$(printf '%s' "${check}" | xargs)"
+            [ -z "${check}" ] && continue
+            case "${check}" in
+              full|schema|tests|targeted|lint|security|restore) ;;
+              *) echo "Unsupported check: ${check}"; exit 1 ;;
+            esac
+            printf '%s\n' "${check}" >> "${normalized_checks}"
+          done < "${checks_file}"
+          sort -u -o "${normalized_checks}" "${normalized_checks}"
 
-          if [ "${profile}" = "targeted" ]; then
-            [ "${count}" -gt 0 ] || { echo "Targeted profile requires at least one spec."; exit 1; }
-            [ "${count}" -le 25 ] || { echo "Targeted profile accepts at most 25 specs."; exit 1; }
-          elif [ "${count}" -gt 0 ]; then
-            echo "Spec references are accepted only by the targeted profile."
+          [ -s "${normalized_checks}" ] || { echo "At least one check is required."; exit 1; }
+
+          if grep -qx full "${normalized_checks}"; then
+            [ "$(wc -l < "${normalized_checks}")" -eq 1 ] || { echo "The full preset cannot be combined with individual checks."; exit 1; }
+            printf '%s\n' schema tests lint security restore > "${normalized_checks}"
+          fi
+
+          if grep -qx tests "${normalized_checks}" && grep -qx targeted "${normalized_checks}"; then
+            echo "Complete and targeted tests cannot be requested together."
             exit 1
           fi
 
-          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
-          echo "profile=${profile}" >> "${GITHUB_OUTPUT}"
+          normalized_specs="${RUNNER_TEMP}/normalized-specs.txt"
+          : > "${normalized_specs}"
+          while IFS= read -r spec; do
+            spec="$(printf '%s' "${spec}" | xargs)"
+            [ -z "${spec}" ] && continue
+            [[ "${spec}" =~ ^spec/[A-Za-z0-9_./-]+(:[0-9]+)?$ ]] || { echo "Invalid targeted spec reference."; exit 1; }
+            printf '%s\n' "${spec}" >> "${normalized_specs}"
+          done < "${specs_file}"
+          sort -u -o "${normalized_specs}" "${normalized_specs}"
+
+          spec_count="$(wc -l < "${normalized_specs}")"
+          if grep -qx targeted "${normalized_checks}"; then
+            [ "${spec_count}" -gt 0 ] || { echo "Targeted checks require at least one spec."; exit 1; }
+            [ "${spec_count}" -le 25 ] || { echo "Targeted checks accept at most 25 specs."; exit 1; }
+          elif [ "${spec_count}" -gt 0 ]; then
+            echo "Spec references are accepted only with the targeted check."
+            exit 1
+          fi
+
+          checks_json="$(jq -R -s -c 'split("\n") | map(select(length > 0))' "${normalized_checks}")"
+          specs_json="$(jq -R -s -c 'split("\n") | map(select(length > 0))' "${normalized_specs}")"
+
+          requested() { grep -qx "$1" "${normalized_checks}"; }
+          bool() { if "$@"; then echo true; else echo false; fi; }
+
+          run_schema="$(bool requested schema)"
+          run_tests="$(bool requested tests)"
+          run_targeted="$(bool requested targeted)"
+          run_restore="$(bool requested restore)"
+          run_lint="$(bool requested lint)"
+          run_security="$(bool requested security)"
+
+          if [ "${run_schema}" = true ] || [ "${run_tests}" = true ] || [ "${run_targeted}" = true ] || [ "${run_restore}" = true ]; then run_db=true; else run_db=false; fi
+          if [ "${run_lint}" = true ] || [ "${run_security}" = true ]; then run_static=true; else run_static=false; fi
+
           {
-            echo "specs<<__PASHAM_SPECS__"
-            cat "${normalized}"
-            echo "__PASHAM_SPECS__"
+            echo "request_id=${request_id}"
+            echo "target_sha=${target_sha}"
+            echo "checks_json=${checks_json}"
+            echo "specs_json=${specs_json}"
+            echo "run_db=${run_db}"
+            echo "run_schema=${run_schema}"
+            echo "run_tests=${run_tests}"
+            echo "run_targeted=${run_targeted}"
+            echo "run_restore=${run_restore}"
+            echo "run_static=${run_static}"
+            echo "run_lint=${run_lint}"
+            echo "run_security=${run_security}"
           } >> "${GITHUB_OUTPUT}"
-          echo "Approved ${profile} request for ${target_sha:0:12}."
 
-      - name: Checkout exact PashamCrafts commit
-        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
-        with:
-          repository: faheemKamboh/pashamcrafts
-          ref: ${{ steps.request.outputs.target_sha }}
-          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
-          persist-credentials: false
-          fetch-depth: 1
-          path: app
+          echo "Approved ${request_id} for ${target_sha:0:12}: $(paste -sd, "${normalized_checks}")."
 
-      - name: Confirm exact checkout
-        shell: bash
-        run: test "$(git -C app rev-parse HEAD)" = "${{ steps.request.outputs.target_sha }}"
+  db_checks:
+    name: Database-backed checks
+    needs: resolve
+    if: needs.resolve.outputs.run_db == 'true'
+    uses: ./.github/workflows/shared-db-checks.yml
+    with:
+      request_id: ${{ needs.resolve.outputs.request_id }}
+      target_sha: ${{ needs.resolve.outputs.target_sha }}
+      run_schema: ${{ needs.resolve.outputs.run_schema == 'true' }}
+      run_tests: ${{ needs.resolve.outputs.run_tests == 'true' }}
+      run_targeted: ${{ needs.resolve.outputs.run_targeted == 'true' }}
+      run_restore: ${{ needs.resolve.outputs.run_restore == 'true' }}
+      specs_json: ${{ needs.resolve.outputs.specs_json }}
+    secrets: inherit
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libvips postgresql-client
-
-      - name: Set up Ruby and gems
-        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
-        with:
-          bundler-cache: true
-          working-directory: app
-
-      - name: Prepare test database
-        id: database
-        if: steps.request.outputs.profile == 'full' || steps.request.outputs.profile == 'targeted' || steps.request.outputs.profile == 'schema' || steps.request.outputs.profile == 'restore'
-        continue-on-error: true
-        working-directory: app
-        shell: bash
-        run: |
-          set +e
-          bundle exec rails db:create db:migrate > "${RUNNER_TEMP}/database.log" 2>&1
-          status=$?
-          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
-          echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          echo "Database preparation: ${result^^}"
-          exit "${status}"
-
-      - name: Verify committed schema
-        id: schema
-        if: (steps.request.outputs.profile == 'full' || steps.request.outputs.profile == 'schema') && steps.database.outputs.result == 'success'
-        continue-on-error: true
-        working-directory: app
-        shell: bash
-        run: |
-          set +e
-          git diff -- db/schema.rb > "${RUNNER_TEMP}/schema.diff"
-          git diff --quiet -- db/schema.rb
-          status=$?
-          if [ "${status}" -ne 0 ]; then cp db/schema.rb "${RUNNER_TEMP}/generated-schema.rb"; fi
-          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
-          echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          echo "Committed schema: ${result^^}"
-          exit "${status}"
-
-      - name: Run complete RSpec suite and enforce coverage
-        id: full_tests
-        if: steps.request.outputs.profile == 'full' && steps.database.outputs.result == 'success'
-        continue-on-error: true
-        working-directory: app
-        shell: bash
-        run: |
-          set +e
-          bundle exec rspec --format progress > "${RUNNER_TEMP}/rspec.log" 2>&1
-          test_status=$?
-          summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/rspec.log" | tail -n 1 || true)"
-          coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/rspec.log" | tail -n 1 | awk '{print $3}' || true)"
-          coverage_status=1
-          if [ -n "${coverage}" ]; then
-            awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
-            coverage_status=$?
-          fi
-          if [ "${test_status}" -eq 0 ] && [ "${coverage_status}" -eq 0 ]; then result=success; else result=failure; fi
-          echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          [ -n "${summary}" ] && echo "RSpec: ${summary}" || echo "RSpec summary unavailable."
-          [ -n "${coverage}" ] && echo "Line coverage: ${coverage}%" || echo "Line coverage unavailable."
-          exit $([ "${result}" = success ] && echo 0 || echo 1)
-
-      - name: Run targeted RSpec examples
-        id: targeted_tests
-        if: steps.request.outputs.profile == 'targeted' && steps.database.outputs.result == 'success'
-        continue-on-error: true
-        working-directory: app
-        shell: bash
-        env:
-          REQUESTED_SPECS: ${{ steps.request.outputs.specs }}
-        run: |
-          set +e
-          mapfile -t specs < <(printf '%s\n' "${REQUESTED_SPECS}" | sed '/^$/d')
-          for spec in "${specs[@]}"; do
-            path="${spec%%:*}"
-            [ -f "${path}" ] || { echo "Requested spec does not exist."; exit 2; }
-          done
-          bundle exec rspec "${specs[@]}" --format progress > "${RUNNER_TEMP}/targeted-rspec.log" 2>&1
-          command_status=$?
-          summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/targeted-rspec.log" | tail -n 1 || true)"
-          if printf '%s' "${summary}" | grep -Eq '^[0-9]+ examples?, 0 failures?'; then
-            result=success
-          else
-            result=failure
-          fi
-          echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          [ -n "${summary}" ] && echo "Targeted RSpec: ${summary}" || echo "Targeted RSpec summary unavailable; command status ${command_status}."
-          exit $([ "${result}" = success ] && echo 0 || echo 1)
-
-      - name: Run RuboCop
-        id: lint
-        if: steps.request.outputs.profile == 'full' || steps.request.outputs.profile == 'lint'
-        continue-on-error: true
-        working-directory: app
-        shell: bash
-        run: |
-          set +e
-          bin/rubocop --format progress > "${RUNNER_TEMP}/rubocop.log" 2>&1
-          status=$?
-          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
-          echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          grep -E '[0-9]+ files? inspected' "${RUNNER_TEMP}/rubocop.log" | tail -n 1 || true
-          exit "${status}"
-
-      - name: Run Brakeman
-        id: security
-        if: steps.request.outputs.profile == 'full' || steps.request.outputs.profile == 'security'
-        continue-on-error: true
-        working-directory: app
-        shell: bash
-        run: |
-          set +e
-          bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error -f json -o "${RUNNER_TEMP}/brakeman.json" > "${RUNNER_TEMP}/brakeman.log" 2>&1
-          status=$?
-          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
-          echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          echo "Brakeman: ${result^^}"
-          exit "${status}"
-
-      - name: Run backup and restore drill
-        id: restore
-        if: (steps.request.outputs.profile == 'full' || steps.request.outputs.profile == 'restore') && steps.database.outputs.result == 'success'
-        continue-on-error: true
-        working-directory: app
-        shell: bash
-        env:
-          DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_backup_source
-          RESTORE_DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_restore_test
-          BACKUP_DIR: ${{ runner.temp }}/backup-drill
-          ALLOW_DESTRUCTIVE_RESTORE: "true"
-          PGPASSWORD: password
-        run: |
-          set +e
-          {
-            bundle exec rails db:create db:migrate &&
-            bundle exec rails runner 'Audit::Recorder.record!(action: "backup.restore_drill")' &&
-            bin/backup_database &&
-            createdb --host=localhost --username=postgres pashamcrafts_restore_test &&
-            export BACKUP_FILE="$(find "${BACKUP_DIR}" -name '*.dump' -type f | head -n 1)" &&
-            test -n "${BACKUP_FILE}" &&
-            bin/verify_database_restore &&
-            test "$(psql "${RESTORE_DATABASE_URL}" -Atqc "SELECT COUNT(*) FROM audit_events WHERE action = 'backup.restore_drill'")" = "1"
-          } > "${RUNNER_TEMP}/restore.log" 2>&1
-          status=$?
-          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
-          echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          echo "Backup and restore: ${result^^}"
-          exit "${status}"
-
-      - name: Calculate requested profile result
-        id: result
-        if: always()
-        shell: bash
-        env:
-          PROFILE: ${{ steps.request.outputs.profile }}
-          DATABASE_RESULT: ${{ steps.database.outputs.result }}
-          SCHEMA_RESULT: ${{ steps.schema.outputs.result }}
-          FULL_TEST_RESULT: ${{ steps.full_tests.outputs.result }}
-          TARGETED_TEST_RESULT: ${{ steps.targeted_tests.outputs.result }}
-          LINT_RESULT: ${{ steps.lint.outputs.result }}
-          SECURITY_RESULT: ${{ steps.security.outputs.result }}
-          RESTORE_RESULT: ${{ steps.restore.outputs.result }}
-        run: |
-          set -euo pipefail
-          result=success
-          require_success() { [ "$1" = success ] || result=failure; }
-          case "${PROFILE}" in
-            full)
-              require_success "${DATABASE_RESULT:-error}"
-              require_success "${SCHEMA_RESULT:-error}"
-              require_success "${FULL_TEST_RESULT:-error}"
-              require_success "${LINT_RESULT:-error}"
-              require_success "${SECURITY_RESULT:-error}"
-              require_success "${RESTORE_RESULT:-error}"
-              ;;
-            targeted)
-              require_success "${DATABASE_RESULT:-error}"
-              require_success "${TARGETED_TEST_RESULT:-error}"
-              ;;
-            schema)
-              require_success "${DATABASE_RESULT:-error}"
-              require_success "${SCHEMA_RESULT:-error}"
-              ;;
-            lint) require_success "${LINT_RESULT:-error}" ;;
-            security) require_success "${SECURITY_RESULT:-error}" ;;
-            restore)
-              require_success "${DATABASE_RESULT:-error}"
-              require_success "${RESTORE_RESULT:-error}"
-              ;;
-            *) result=failure ;;
-          esac
-          echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          {
-            echo "## Explicit PashamCrafts verification"
-            echo
-            echo "Target: `${{ steps.request.outputs.target_sha }}`"
-            echo "Profile: `${PROFILE}`"
-            echo "Result: **${result}**"
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-      - name: Encrypt failure diagnostics
-        if: always() && steps.result.outputs.result != 'success'
-        shell: bash
-        run: |
-          set -euo pipefail
-          diagnostics="${RUNNER_TEMP}/diagnostics"
-          encrypted="${RUNNER_TEMP}/encrypted-diagnostics"
-          mkdir -p "${diagnostics}" "${encrypted}"
-          for file in database.log schema.diff generated-schema.rb rspec.log targeted-rspec.log rubocop.log brakeman.log brakeman.json restore.log; do
-            [ -f "${RUNNER_TEMP}/${file}" ] && cp "${RUNNER_TEMP}/${file}" "${diagnostics}/${file}"
-          done
-          tar -czf "${RUNNER_TEMP}/diagnostics.tar.gz" -C "${diagnostics}" .
-          cat > "${RUNNER_TEMP}/diagnostic-public.pem" <<'PUBLIC_KEY'
-          -----BEGIN PUBLIC KEY-----
-          MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAq0+e4QuKjIqicH4FOmbg
-          5eLb+RBRGjLsf1hVj3DA2QscIiL3/35H07ZFeXXZ2akEfLYtX/lnLiIHihMxW/8B
-          xgMgXHETYzcGZ3JaRLLL8prAi1nPaYiajxFkiE2UevDKzE+5pmJ5CpIt+tB5L6Kq
-          3xay91hYitCdc7OLFQMt1yIzZZnbOAL4Sa3Zo1lVg8DMeQmyjwuN7AZSVkQOvbLa
-          QysHW4+IBP8E9N4B+3yspqbmh8bYum26wfTaD35LBQSUasmpQ7RMIu6bBeUmk898
-          2wNCOe0PTK3OyW9T9kGkzkYrE0PNW5rOx2U3IjgMud0g1+I6HxNA8llOn1xI0m6t
-          oZZOh7PsN1Gq/bfsdF91gZNfrlsglSqbfx8RJJWn8bcqF7jcxnos+h8nuQMrjIa0
-          WX7ogy9unowrcXS3ILle5bRQssggzsIZLOdnUV7QFMi43cr+ZFg1wo5rQP9vR7zg
-          tV+Gz9SXCRLZOevXhH4E8jqgTKg9RL1WcA+WG9ckmYU7AgMBAAE=
-          -----END PUBLIC KEY-----
-          PUBLIC_KEY
-          openssl rand -hex 32 > "${RUNNER_TEMP}/diagnostic-passphrase"
-          openssl enc -aes-256-cbc -salt -pbkdf2 \
-            -in "${RUNNER_TEMP}/diagnostics.tar.gz" \
-            -out "${encrypted}/payload.enc" \
-            -pass file:"${RUNNER_TEMP}/diagnostic-passphrase"
-          openssl pkeyutl -encrypt -pubin \
-            -inkey "${RUNNER_TEMP}/diagnostic-public.pem" \
-            -in "${RUNNER_TEMP}/diagnostic-passphrase" \
-            -out "${encrypted}/passphrase.enc" \
-            -pkeyopt rsa_padding_mode:oaep \
-            -pkeyopt rsa_oaep_md:sha256
-          rm -rf "${diagnostics}" "${RUNNER_TEMP}/diagnostics.tar.gz" \
-            "${RUNNER_TEMP}/diagnostic-passphrase" "${RUNNER_TEMP}/diagnostic-public.pem"
-
-      - name: Upload encrypted failure diagnostics
-        if: always() && steps.result.outputs.result != 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: encrypted-${{ steps.request.outputs.profile }}-diagnostics
-          path: ${{ runner.temp }}/encrypted-diagnostics
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Enforce requested profile result
-        if: always()
-        run: test "${{ steps.result.outputs.result }}" = success
+  static_checks:
+    name: Static checks
+    needs: resolve
+    if: needs.resolve.outputs.run_static == 'true'
+    uses: ./.github/workflows/shared-static-checks.yml
+    with:
+      request_id: ${{ needs.resolve.outputs.request_id }}
+      target_sha: ${{ needs.resolve.outputs.target_sha }}
+      run_lint: ${{ needs.resolve.outputs.run_lint == 'true' }}
+      run_security: ${{ needs.resolve.outputs.run_security == 'true' }}
+    secrets: inherit
 
   report:
-    name: Publish explicit verification status
+    name: Publish requested check results
     if: always()
-    needs: verify
+    needs: [resolve, db_checks, static_checks]
     runs-on: ubuntu-latest
     permissions:
       statuses: write
     steps:
-      - name: Publish final status
+      - name: Publish statuses and enforce result
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          PROFILE: ${{ needs.verify.outputs.profile }}
-          TARGET_SHA: ${{ needs.verify.outputs.target_sha }}
-          RESULT: ${{ needs.verify.outputs.result }}
+          REQUEST_ID: ${{ needs.resolve.outputs.request_id }}
+          TARGET_SHA: ${{ needs.resolve.outputs.target_sha }}
+          CHECKS_JSON: ${{ needs.resolve.outputs.checks_json }}
+          RESOLVE_JOB: ${{ needs.resolve.result }}
+          DB_JOB: ${{ needs.db_checks.result }}
+          STATIC_JOB: ${{ needs.static_checks.result }}
+          SCHEMA_RESULT: ${{ needs.db_checks.outputs.schema_result }}
+          TESTS_RESULT: ${{ needs.db_checks.outputs.tests_result }}
+          TARGETED_RESULT: ${{ needs.db_checks.outputs.targeted_result }}
+          RESTORE_RESULT: ${{ needs.db_checks.outputs.restore_result }}
+          LINT_RESULT: ${{ needs.static_checks.outputs.lint_result }}
+          SECURITY_RESULT: ${{ needs.static_checks.outputs.security_result }}
         run: |
           set -euo pipefail
-          profile="${PROFILE:-unknown}"
-          result="${RESULT:-failure}"
-          case "${result}" in success) state=success;; failure) state=failure;; *) state=error;; esac
-          description="${profile} verification ${result} for ${TARGET_SHA:0:12}"
-          payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/${profile}" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
-          curl --fail-with-body --silent --show-error --request POST \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2026-03-10" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
-            --data "${payload}" > /dev/null
+          overall=success
+
+          publish() {
+            local check="$1" result="$2" state description payload
+            case "${result}" in
+              success) state=success ;;
+              failure) state=failure; overall=failure ;;
+              *) state=error; overall=failure ;;
+            esac
+            description="${check} ${result} for ${TARGET_SHA:0:12}"
+            payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/${check}" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            curl --fail-with-body --silent --show-error --request POST \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+              --data "${payload}" > /dev/null
+          }
+
+          if [ "${RESOLVE_JOB}" != success ]; then
+            overall=failure
+            publish request failure
+          else
+            while IFS= read -r check; do
+              case "${check}" in
+                schema) publish schema "${SCHEMA_RESULT:-error}" ;;
+                tests) publish tests "${TESTS_RESULT:-error}" ;;
+                targeted) publish targeted "${TARGETED_RESULT:-error}" ;;
+                restore) publish restore "${RESTORE_RESULT:-error}" ;;
+                lint) publish lint "${LINT_RESULT:-error}" ;;
+                security) publish security "${SECURITY_RESULT:-error}" ;;
+                *) publish request failure ;;
+              esac
+            done < <(jq -r '.[]' <<< "${CHECKS_JSON}")
+          fi
+
+          {
+            echo "## PashamCrafts explicit verification"
+            echo
+            echo "Request: \`${REQUEST_ID:-unresolved}\`"
+            echo "Target: \`${TARGET_SHA:-unresolved}\`"
+            echo "Checks: \`${CHECKS_JSON:-[]}\`"
+            echo "Result: **${overall}**"
+            echo
+            echo "Database workflow: \`${DB_JOB}\`"
+            echo "Static workflow: \`${STATIC_JOB}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          test "${overall}" = success
