@@ -61,6 +61,7 @@ jobs:
       - working-directory: app
         run: bundle exec rails db:create db:migrate
       - working-directory: app
+        continue-on-error: true
         run: bundle exec rspec --format progress > "${RUNNER_TEMP}/rspec.log" 2>&1
       - name: Extract uncovered line locations
         id: gaps
