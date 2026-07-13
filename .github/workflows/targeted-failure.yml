@@ -74,12 +74,12 @@ jobs:
             detail=example-passed
           else
             result=failure
-            raw="$(awk '/NameError:/{print; for (i=0; i<3; i++) { if (getline) print }; exit}' "${RUNNER_TEMP}/targeted.log" | tr '\n\r' '  ' || true)"
+            raw="$(awk '/^[[:space:]]+[A-Z][A-Za-z0-9_:]+:/{print; if (getline) print; if (getline) print; exit}' "${RUNNER_TEMP}/targeted.log" | tr '\n\r' '  ' || true)"
             if [ -z "${raw}" ]; then
               raw="$(grep -A2 'Failure/Error:' "${RUNNER_TEMP}/targeted.log" | head -n 3 | tr '\n\r' '  ' || true)"
             fi
             [ -n "${raw}" ] || raw=unknown-error
-            detail="$(printf '%s' "${raw}" | sed -E 's/^[[:space:]]+//; s/[^A-Za-z0-9_:.-]+/-/g; s/-+/-/g' | cut -c1-82)"
+            detail="$(printf '%s' "${raw}" | sed -E 's/^[[:space:]]+//; s/[^A-Za-z0-9_:.,=-]+/-/g; s/-+/-/g' | cut -c1-82)"
           fi
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
