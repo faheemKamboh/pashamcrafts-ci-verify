@@ -12,24 +12,14 @@ permissions:
   statuses: write
 
 jobs:
-  commit-schema:
+  verify-request:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      RAILS_ENV: test
-      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+    timeout-minutes: 5
+    outputs:
+      request_id: ${{ steps.request.outputs.request_id }}
+      target_sha: ${{ steps.request.outputs.target_sha }}
+      branch: ${{ steps.request.outputs.branch }}
+      diagnostic: ${{ steps.access.outputs.diagnostic }}
     steps:
       - name: Checkout schema request
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
@@ -52,8 +42,8 @@ jobs:
           echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
           echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
 
-      - name: Verify exact branch head
-        id: verify
+      - name: Check scoped schema token access
+        id: access
         shell: bash
         env:
           PRIVATE_TOKEN: ${{ secrets.PASHAMCRAFTS_SCHEMA_WRITE_TOKEN }}
@@ -61,52 +51,84 @@ jobs:
           TARGET_BRANCH: ${{ steps.request.outputs.branch }}
         run: |
           set -euo pipefail
+          ok=false
+          diagnostic=unknown
+
           if [ -z "${PRIVATE_TOKEN}" ]; then
-            echo "diagnostic=secret-empty" >> "${GITHUB_OUTPUT}"
+            diagnostic=secret-empty
+          else
+            encoded_branch="$(jq -rn --arg value "${TARGET_BRANCH}" '$value | @uri')"
+            response_file="$(mktemp)"
+            status="$(curl --silent --show-error --output "${response_file}" --write-out '%{http_code}' \
+              --header "Authorization: Bearer ${PRIVATE_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/faheemKamboh/pashamcrafts/branches/${encoded_branch}")"
+
+            if [ "${status}" != "200" ]; then
+              diagnostic="http-${status}"
+              message="$(jq -r '.message // "Unknown GitHub API error"' "${response_file}" 2>/dev/null || printf 'Unreadable GitHub API response')"
+              echo "::error::Schema token branch lookup failed (${status}): ${message}"
+            else
+              current_sha="$(jq -er '.commit.sha' "${response_file}")"
+              if [ "${current_sha}" != "${TARGET_SHA}" ]; then
+                diagnostic=branch-head-mismatch
+                echo "::error::Requested branch head changed: expected ${TARGET_SHA:0:12}, found ${current_sha:0:12}"
+              else
+                ok=true
+                diagnostic=ok
+              fi
+            fi
+          fi
+
+          if [ "${diagnostic}" = secret-empty ]; then
             echo "::error::PASHAMCRAFTS_SCHEMA_WRITE_TOKEN is empty in this repository workflow"
-            exit 1
           fi
+          echo "ok=${ok}" >> "${GITHUB_OUTPUT}"
+          echo "diagnostic=${diagnostic}" >> "${GITHUB_OUTPUT}"
 
-          encoded_branch="$(jq -rn --arg value "${TARGET_BRANCH}" '$value | @uri')"
-          response_file="$(mktemp)"
-          status="$(curl --silent --show-error --output "${response_file}" --write-out '%{http_code}' \
-            --header "Authorization: Bearer ${PRIVATE_TOKEN}" \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/faheemKamboh/pashamcrafts/branches/${encoded_branch}")"
-          if [ "${status}" != "200" ]; then
-            echo "diagnostic=http-${status}" >> "${GITHUB_OUTPUT}"
-            message="$(jq -r '.message // "Unknown GitHub API error"' "${response_file}" 2>/dev/null || printf 'Unreadable GitHub API response')"
-            echo "::error::Schema token branch lookup failed (${status}): ${message}"
-            exit 1
-          fi
+      - name: Enforce verified request
+        if: steps.access.outputs.ok != 'true'
+        run: exit 1
 
-          current_sha="$(jq -er '.commit.sha' "${response_file}")"
-          if [ "${current_sha}" != "${TARGET_SHA}" ]; then
-            echo "diagnostic=branch-head-mismatch" >> "${GITHUB_OUTPUT}"
-            echo "::error::Requested branch head changed: expected ${TARGET_SHA:0:12}, found ${current_sha:0:12}"
-            exit 1
-          fi
-          echo "diagnostic=ok" >> "${GITHUB_OUTPUT}"
-
+  commit-schema:
+    needs: verify-request
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      commit_sha: ${{ steps.commit.outputs.commit_sha }}
+      changed: ${{ steps.commit.outputs.changed }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+    steps:
       - name: Checkout exact PashamCrafts commit
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
         with:
           repository: faheemKamboh/pashamcrafts
-          ref: ${{ steps.request.outputs.target_sha }}
+          ref: ${{ needs.verify-request.outputs.target_sha }}
           token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
           persist-credentials: false
           fetch-depth: 1
-          path: app
 
       - name: Set up Ruby and gems
         uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
         with:
           bundler-cache: true
-          working-directory: app
 
       - name: Generate exact schema
-        working-directory: app
         run: bundle exec rails db:create db:migrate
 
       - name: Create race-safe schema commit
@@ -114,9 +136,9 @@ jobs:
         shell: bash
         env:
           PRIVATE_TOKEN: ${{ secrets.PASHAMCRAFTS_SCHEMA_WRITE_TOKEN }}
-          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
-          TARGET_BRANCH: ${{ steps.request.outputs.branch }}
-          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+          TARGET_SHA: ${{ needs.verify-request.outputs.target_sha }}
+          TARGET_BRANCH: ${{ needs.verify-request.outputs.branch }}
+          REQUEST_ID: ${{ needs.verify-request.outputs.request_id }}
         run: |
           set -euo pipefail
           api="https://api.github.com/repos/faheemKamboh/pashamcrafts"
@@ -125,7 +147,7 @@ jobs:
           current_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/branches/${encoded_branch}" | jq -er '.commit.sha')"
           test "${current_sha}" = "${TARGET_SHA}"
 
-          encoded="$(base64 -w0 app/db/schema.rb)"
+          encoded="$(base64 -w0 db/schema.rb)"
           schema_blob="$(jq -n --arg content "${encoded}" '{content: $content, encoding: "base64"}' | curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/blobs" --data-binary @- | jq -er '.sha')"
           existing_blob="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/contents/db/schema.rb?ref=${TARGET_SHA}" | jq -er '.sha')"
 
@@ -145,23 +167,32 @@ jobs:
           echo "commit_sha=${new_commit}" >> "${GITHUB_OUTPUT}"
           echo "changed=true" >> "${GITHUB_OUTPUT}"
 
+  publish-result:
+    if: always()
+    needs: [verify-request, commit-schema]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
       - name: Publish result
-        if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RESULT: ${{ job.status }}
-          COMMIT_SHA: ${{ steps.commit.outputs.commit_sha }}
-          CHANGED: ${{ steps.commit.outputs.changed }}
-          VERIFY_DIAGNOSTIC: ${{ steps.verify.outputs.diagnostic }}
+          VERIFY_RESULT: ${{ needs.verify-request.result }}
+          VERIFY_DIAGNOSTIC: ${{ needs.verify-request.outputs.diagnostic }}
+          COMMIT_RESULT: ${{ needs.commit-schema.result }}
+          COMMIT_SHA: ${{ needs.commit-schema.outputs.commit_sha }}
+          CHANGED: ${{ needs.commit-schema.outputs.changed }}
         run: |
           set -euo pipefail
-          if [ "${RESULT}" = success ]; then
+          if [ "${VERIFY_RESULT}" != success ]; then
+            state=failure
+            description="Schema token verification failed (${VERIFY_DIAGNOSTIC:-unknown})"
+          elif [ "${COMMIT_RESULT}" = success ]; then
             state=success
             description="Schema committed at ${COMMIT_SHA:0:12}; changed=${CHANGED}"
           else
             state=failure
-            description="Schema commit failed at ${VERIFY_DIAGNOSTIC:-unknown}"
+            description="Schema generation or branch update failed"
           fi
           payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/schema-commit" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
           curl --fail-with-body --silent --show-error --request POST \
