@@ -1,10 +1,10 @@
-name: Export generated PashamCrafts schema blob
+name: Commit generated PashamCrafts schema
 
 on:
   push:
     branches: [main]
     paths:
-      - "ci/schema-blob-request.sha"
+      - "ci/schema-commit-request.json"
       - ".github/workflows/schema-blob-export.yml"
 
 permissions:
@@ -12,7 +12,7 @@ permissions:
   statuses: write
 
 jobs:
-  export:
+  commit-schema:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -31,26 +31,47 @@ jobs:
       RAILS_ENV: test
       DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
     steps:
-      - name: Checkout export configuration
+      - name: Checkout schema request
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
         with:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Validate target
-        id: target
+      - name: Validate request
+        id: request
         shell: bash
         run: |
           set -euo pipefail
-          target_sha="$(tr -d '[:space:]' < ci/schema-blob-request.sha)"
+          request_id="$(jq -er '.request_id' ci/schema-commit-request.json)"
+          target_sha="$(jq -er '.target_sha' ci/schema-commit-request.json)"
+          branch="$(jq -er '.branch' ci/schema-commit-request.json)"
+          [[ "${request_id}" =~ ^[a-z0-9][a-z0-9._-]{0,79}$ ]]
           [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${branch}" =~ ^feature/issue-[0-9]+-[a-z0-9-]+$ ]]
+          echo "request_id=${request_id}" >> "${GITHUB_OUTPUT}"
           echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+          echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
+
+      - name: Verify exact branch head
+        shell: bash
+        env:
+          PRIVATE_TOKEN: ${{ secrets.PASHAMCRAFTS_SCHEMA_WRITE_TOKEN }}
+          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
+          TARGET_BRANCH: ${{ steps.request.outputs.branch }}
+        run: |
+          set -euo pipefail
+          current_sha="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${PRIVATE_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/faheemKamboh/pashamcrafts/git/ref/heads/${TARGET_BRANCH}" | jq -er '.object.sha')"
+          test "${current_sha}" = "${TARGET_SHA}"
 
       - name: Checkout exact PashamCrafts commit
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
         with:
           repository: faheemKamboh/pashamcrafts
-          ref: ${{ steps.target.outputs.target_sha }}
+          ref: ${{ steps.request.outputs.target_sha }}
           token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
           persist-credentials: false
           fetch-depth: 1
@@ -66,42 +87,60 @@ jobs:
         working-directory: app
         run: bundle exec rails db:create db:migrate
 
-      - name: Create dangling schema blob in PashamCrafts
-        id: blob
+      - name: Create race-safe schema commit
+        id: commit
         shell: bash
         env:
-          PRIVATE_TOKEN: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          PRIVATE_TOKEN: ${{ secrets.PASHAMCRAFTS_SCHEMA_WRITE_TOKEN }}
+          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
+          TARGET_BRANCH: ${{ steps.request.outputs.branch }}
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
         run: |
           set -euo pipefail
+          api="https://api.github.com/repos/faheemKamboh/pashamcrafts"
+          auth=(--header "Authorization: Bearer ${PRIVATE_TOKEN}" --header "Accept: application/vnd.github+json" --header "X-GitHub-Api-Version: 2022-11-28")
+
+          current_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/git/ref/heads/${TARGET_BRANCH}" | jq -er '.object.sha')"
+          test "${current_sha}" = "${TARGET_SHA}"
+
           encoded="$(base64 -w0 app/db/schema.rb)"
-          response="$(jq -n --arg content "${encoded}" '{content: $content, encoding: "base64"}' | curl --fail-with-body --silent --show-error \
-            --request POST \
-            --header "Authorization: Bearer ${PRIVATE_TOKEN}" \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/faheemKamboh/pashamcrafts/git/blobs" \
-            --data-binary @-)"
-          blob_sha="$(jq -er '.sha' <<< "${response}")"
-          echo "blob_sha=${blob_sha}" >> "${GITHUB_OUTPUT}"
-          echo "Generated schema blob: ${blob_sha}"
+          schema_blob="$(jq -n --arg content "${encoded}" '{content: $content, encoding: "base64"}' | curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/blobs" --data-binary @- | jq -er '.sha')"
+          existing_blob="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/contents/db/schema.rb?ref=${TARGET_SHA}" | jq -er '.sha')"
+
+          if [ "${schema_blob}" = "${existing_blob}" ]; then
+            echo "commit_sha=${TARGET_SHA}" >> "${GITHUB_OUTPUT}"
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          base_tree="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/git/commits/${TARGET_SHA}" | jq -er '.tree.sha')"
+          tree_payload="$(jq -n --arg base_tree "${base_tree}" --arg blob "${schema_blob}" '{base_tree: $base_tree, tree: [{path: "db/schema.rb", mode: "100644", type: "blob", sha: $blob}]}')"
+          new_tree="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/trees" --data "${tree_payload}" | jq -er '.sha')"
+          commit_payload="$(jq -n --arg message "Commit generated schema (${REQUEST_ID})" --arg tree "${new_tree}" --arg parent "${TARGET_SHA}" '{message: $message, tree: $tree, parents: [$parent]}')"
+          new_commit="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/commits" --data "${commit_payload}" | jq -er '.sha')"
+          ref_payload="$(jq -n --arg sha "${new_commit}" '{sha: $sha, force: false}')"
+          curl --fail-with-body --silent --show-error "${auth[@]}" --request PATCH "${api}/git/refs/heads/${TARGET_BRANCH}" --data "${ref_payload}" > /dev/null
+          echo "commit_sha=${new_commit}" >> "${GITHUB_OUTPUT}"
+          echo "changed=true" >> "${GITHUB_OUTPUT}"
 
       - name: Publish result
         if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          BLOB_SHA: ${{ steps.blob.outputs.blob_sha }}
           RESULT: ${{ job.status }}
+          COMMIT_SHA: ${{ steps.commit.outputs.commit_sha }}
+          CHANGED: ${{ steps.commit.outputs.changed }}
         run: |
           set -euo pipefail
           if [ "${RESULT}" = success ]; then
             state=success
-            description="Schema blob ${BLOB_SHA}"
+            description="Schema committed at ${COMMIT_SHA:0:12}; changed=${CHANGED}"
           else
             state=failure
-            description="Schema blob export blocked by token permissions"
+            description="Schema commit failed; branch was not advanced"
           fi
-          payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/schema-blob-export" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/schema-commit" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
           curl --fail-with-body --silent --show-error --request POST \
             --header "Authorization: Bearer ${GH_TOKEN}" \
             --header "Accept: application/vnd.github+json" \
