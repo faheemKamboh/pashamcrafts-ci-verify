@@ -1,17 +1,8 @@
 {
-  "request_id": "issue-93-targeted-2",
+  "request_id": "issue-93-final-lint-1",
   "target_sha": "f8bcc68209fc1f291b24c280b5c47cca3df73e32",
   "checks": [
-    "targeted"
+    "lint"
   ],
-  "specs": [
-    "spec/services/materials/ledger_spec.rb",
-    "spec/services/materials/record_purchase_spec.rb",
-    "spec/services/costing/create_snapshot_spec.rb",
-    "spec/requests/admin/materials_spec.rb",
-    "spec/requests/admin/material_purchases_spec.rb",
-    "spec/requests/admin/suppliers_spec.rb",
-    "spec/requests/admin/cost_profiles_spec.rb",
-    "spec/requests/material_cost_privacy_spec.rb"
-  ]
+  "specs": []
 }
