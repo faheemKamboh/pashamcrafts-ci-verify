@@ -1,8 +1,19 @@
 {
-  "request_id": "issue-72-schema-normalization-1",
-  "target_sha": "e4fefeb31833db055e09496f0b8cdc7383a282de",
+  "request_id": "issue-92-targeted-1",
+  "target_sha": "ede2072e97d74f000a175035ebf7a1287006f449",
   "checks": [
-    "schema"
+    "schema",
+    "targeted",
+    "lint",
+    "security"
   ],
-  "specs": []
+  "specs": [
+    "spec/models/inquiry_spec.rb",
+    "spec/models/inquiry_conversion_spec.rb",
+    "spec/services/inquiries/submit_spec.rb",
+    "spec/services/inquiries/convert_spec.rb",
+    "spec/requests/inquiries_spec.rb",
+    "spec/requests/admin/inquiries_spec.rb",
+    "spec/requests/admin/admins_spec.rb"
+  ]
 }
