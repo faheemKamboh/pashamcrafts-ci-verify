@@ -60,12 +60,23 @@ jobs:
           TARGET_BRANCH: ${{ steps.request.outputs.branch }}
         run: |
           set -euo pipefail
-          current_sha="$(curl --fail-with-body --silent --show-error \
+          encoded_branch="$(jq -rn --arg value "${TARGET_BRANCH}" '$value | @uri')"
+          response_file="$(mktemp)"
+          status="$(curl --silent --show-error --output "${response_file}" --write-out '%{http_code}' \
             --header "Authorization: Bearer ${PRIVATE_TOKEN}" \
             --header "Accept: application/vnd.github+json" \
             --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/faheemKamboh/pashamcrafts/git/ref/heads/${TARGET_BRANCH}" | jq -er '.object.sha')"
-          test "${current_sha}" = "${TARGET_SHA}"
+            "https://api.github.com/repos/faheemKamboh/pashamcrafts/branches/${encoded_branch}")"
+          if [ "${status}" != "200" ]; then
+            message="$(jq -r '.message // "Unknown GitHub API error"' "${response_file}" 2>/dev/null || printf 'Unreadable GitHub API response')"
+            echo "::error::Schema token branch lookup failed (${status}): ${message}"
+            exit 1
+          fi
+          current_sha="$(jq -er '.commit.sha' "${response_file}")"
+          if [ "${current_sha}" != "${TARGET_SHA}" ]; then
+            echo "::error::Requested branch head changed: expected ${TARGET_SHA:0:12}, found ${current_sha:0:12}"
+            exit 1
+          fi
 
       - name: Checkout exact PashamCrafts commit
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
@@ -99,8 +110,8 @@ jobs:
           set -euo pipefail
           api="https://api.github.com/repos/faheemKamboh/pashamcrafts"
           auth=(--header "Authorization: Bearer ${PRIVATE_TOKEN}" --header "Accept: application/vnd.github+json" --header "X-GitHub-Api-Version: 2022-11-28")
-
-          current_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/git/ref/heads/${TARGET_BRANCH}" | jq -er '.object.sha')"
+          encoded_branch="$(jq -rn --arg value "${TARGET_BRANCH}" '$value | @uri')"
+          current_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/branches/${encoded_branch}" | jq -er '.commit.sha')"
           test "${current_sha}" = "${TARGET_SHA}"
 
           encoded="$(base64 -w0 app/db/schema.rb)"
