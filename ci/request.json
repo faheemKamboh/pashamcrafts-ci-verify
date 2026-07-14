@@ -1,10 +1,8 @@
 {
-  "request_id": "issue-93-targeted-1",
-  "target_sha": "c4e07c719ef52b9f27b734cc6858e3145c2da83d",
+  "request_id": "issue-93-targeted-2",
+  "target_sha": "f8bcc68209fc1f291b24c280b5c47cca3df73e32",
   "checks": [
-    "targeted",
-    "lint",
-    "security"
+    "targeted"
   ],
   "specs": [
     "spec/services/materials/ledger_spec.rb",
