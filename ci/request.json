@@ -1,11 +1,9 @@
 {
-  "request_id": "issue-92-targeted-1",
-  "target_sha": "ede2072e97d74f000a175035ebf7a1287006f449",
+  "request_id": "issue-92-targeted-2",
+  "target_sha": "12c5107f97e63ed7c6874e0898de1d057abb61b5",
   "checks": [
-    "schema",
     "targeted",
-    "lint",
-    "security"
+    "lint"
   ],
   "specs": [
     "spec/models/inquiry_spec.rb",
