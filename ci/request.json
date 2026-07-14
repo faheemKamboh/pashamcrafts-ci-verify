@@ -1,17 +1,19 @@
 {
-  "request_id": "issue-92-targeted-2",
-  "target_sha": "12c5107f97e63ed7c6874e0898de1d057abb61b5",
+  "request_id": "issue-93-targeted-1",
+  "target_sha": "c4e07c719ef52b9f27b734cc6858e3145c2da83d",
   "checks": [
     "targeted",
-    "lint"
+    "lint",
+    "security"
   ],
   "specs": [
-    "spec/models/inquiry_spec.rb",
-    "spec/models/inquiry_conversion_spec.rb",
-    "spec/services/inquiries/submit_spec.rb",
-    "spec/services/inquiries/convert_spec.rb",
-    "spec/requests/inquiries_spec.rb",
-    "spec/requests/admin/inquiries_spec.rb",
-    "spec/requests/admin/admins_spec.rb"
+    "spec/services/materials/ledger_spec.rb",
+    "spec/services/materials/record_purchase_spec.rb",
+    "spec/services/costing/create_snapshot_spec.rb",
+    "spec/requests/admin/materials_spec.rb",
+    "spec/requests/admin/material_purchases_spec.rb",
+    "spec/requests/admin/suppliers_spec.rb",
+    "spec/requests/admin/cost_profiles_spec.rb",
+    "spec/requests/material_cost_privacy_spec.rb"
   ]
 }
