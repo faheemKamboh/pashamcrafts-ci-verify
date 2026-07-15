@@ -8,7 +8,7 @@ on:
       - ".github/workflows/targeted-diagnostic.yml"
 
 permissions:
-  contents: read
+  contents: write
   statuses: write
 
 jobs:
@@ -35,7 +35,8 @@ jobs:
       - name: Checkout diagnostic request
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
         with:
-          persist-credentials: false
+          ref: main
+          persist-credentials: true
           fetch-depth: 1
 
       - name: Validate targeted request
@@ -43,10 +44,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          request_id="$(jq -er '.request_id' ci/request.json)"
           target_sha="$(jq -er '.target_sha' ci/request.json)"
           jq -e '.checks == ["targeted"]' ci/request.json > /dev/null
           jq -e '.specs | type == "array" and length > 0 and all(test("^spec/[a-zA-Z0-9_./-]+_spec\\.rb$"))' ci/request.json > /dev/null
           [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          echo "request_id=${request_id}" >> "${GITHUB_OUTPUT}"
           echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
           jq -r '.specs[]' ci/request.json > "${RUNNER_TEMP}/specs.txt"
 
@@ -83,13 +86,35 @@ jobs:
           bundle exec rails db:create db:migrate > /dev/null 2>&1
           mapfile -t specs < "${RUNNER_TEMP}/specs.txt"
           bundle exec rspec "${specs[@]}" --format json --out "${RUNNER_TEMP}/rspec.json" > /dev/null 2>&1
-          status=$?
           summary="$(jq -r '"\(.summary.example_count) examples, \(.summary.failure_count) failures"' "${RUNNER_TEMP}/rspec.json")"
           failures="$(jq -r '[.examples[] | select(.status == "failed") | "\(.file_path):\(.line_number) | \(.exception.message | split("\n")[0])"] | join(" || ")' "${RUNNER_TEMP}/rspec.json" | cut -c1-1600)"
           detail="${summary}; ${failures:-no failure detail}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
           echo "TARGETED_DETAIL=${detail}"
           exit 0
+
+      - name: Store sanitized diagnostic result
+        env:
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
+          DETAIL: ${{ steps.tests.outputs.detail }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg request_id "${REQUEST_ID}" \
+            --arg target_sha "${TARGET_SHA}" \
+            --arg detail "${DETAIL:-unavailable}" \
+            '{request_id: $request_id, target_sha: $target_sha, detail: $detail}' \
+            > ci/targeted-diagnostic-result.json
+          git config user.name "pashamcrafts-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ci/targeted-diagnostic-result.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Record sanitized targeted diagnostic"
+          git push origin HEAD:main
 
       - name: Publish sanitized detail
         env:
