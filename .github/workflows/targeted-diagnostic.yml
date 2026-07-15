@@ -87,7 +87,7 @@ jobs:
           mapfile -t specs < "${RUNNER_TEMP}/specs.txt"
           bundle exec rspec "${specs[@]}" --format json --out "${RUNNER_TEMP}/rspec.json" > /dev/null 2>&1
           summary="$(jq -r '"\(.summary.example_count) examples, \(.summary.failure_count) failures"' "${RUNNER_TEMP}/rspec.json")"
-          failures="$(jq -r '[.examples[] | select(.status == "failed") | "\(.file_path):\(.line_number) | \(.exception.message | split("\n")[0])"] | join(" || ")' "${RUNNER_TEMP}/rspec.json" | cut -c1-1600)"
+          failures="$(jq -r '[.examples[] | select(.status == "failed") | "\(.file_path):\(.line_number) | \(.exception.class): \((.exception.message | split("\n") | map(select(length > 0)) | .[0]) // "no message")"] | join(" || ")' "${RUNNER_TEMP}/rspec.json" | cut -c1-1600)"
           detail="${summary}; ${failures:-no failure detail}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
           echo "TARGETED_DETAIL=${detail}"
