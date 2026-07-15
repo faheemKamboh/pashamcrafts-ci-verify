@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-74-foundation-targeted-1",
-  "target_sha": "00e5c01f3d97803e4f0cd08878188d94c41bea5e",
-  "detail": "26 examples, 0 failures; no failure detail"
+  "request_id": "issue-74-ready-checkout-targeted-1",
+  "target_sha": "b78d40eff5c0e0fbc334d89f471990c9e9fdd86d",
+  "detail": "40 examples, 0 failures; no failure detail"
 }
