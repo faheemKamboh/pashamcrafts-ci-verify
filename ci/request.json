@@ -1,6 +1,9 @@
 {
-  "request_id": "issue-94-full-1",
-  "target_sha": "204a9a9171ada886daeec8b60033aed0618fe622",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-94-edge-targeted-1",
+  "target_sha": "32ead86c2e035b530ef27b9670c287ce64079c5e",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/requests/admin/delivery_edge_cases_spec.rb",
+    "spec/models/delivery_quote_helpers_spec.rb"
+  ]
 }
