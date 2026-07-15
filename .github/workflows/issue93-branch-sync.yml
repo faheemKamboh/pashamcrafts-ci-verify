@@ -1,0 +1,186 @@
+name: Sync issue 93 onto finalized foundation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ci/issue93-sync-request.json"
+      - ".github/workflows/issue93-branch-sync.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      new_head_sha: ${{ steps.merge.outputs.new_head_sha }}
+    steps:
+      - name: Checkout sync request
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate exact request and token access
+        id: request
+        shell: bash
+        env:
+          PRIVATE_TOKEN: ${{ secrets.PASHAMCRAFTS_SCHEMA_WRITE_TOKEN }}
+        run: |
+          set -euo pipefail
+          request_id="$(jq -er '.request_id' ci/issue93-sync-request.json)"
+          target_branch="$(jq -er '.target_branch' ci/issue93-sync-request.json)"
+          expected_head_sha="$(jq -er '.expected_head_sha' ci/issue93-sync-request.json)"
+          base_sha="$(jq -er '.base_sha' ci/issue93-sync-request.json)"
+          [[ "${request_id}" =~ ^issue-93-sync-after-117-[a-z0-9._-]+$ ]]
+          test "${target_branch}" = "feature/issue-93-materials-costing-clean"
+          [[ "${expected_head_sha}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${base_sha}" =~ ^[0-9a-f]{40}$ ]]
+          test -n "${PRIVATE_TOKEN}"
+
+          api="https://api.github.com/repos/faheemKamboh/pashamcrafts"
+          auth=(--header "Authorization: Bearer ${PRIVATE_TOKEN}" --header "Accept: application/vnd.github+json" --header "X-GitHub-Api-Version: 2022-11-28")
+          encoded_branch="$(jq -rn --arg value "${target_branch}" '$value | @uri')"
+          current_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/branches/${encoded_branch}" | jq -er '.commit.sha')"
+          test "${current_sha}" = "${expected_head_sha}"
+          curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/commits/${base_sha}" > /dev/null
+
+          echo "request_id=${request_id}" >> "${GITHUB_OUTPUT}"
+          echo "target_branch=${target_branch}" >> "${GITHUB_OUTPUT}"
+          echo "expected_head_sha=${expected_head_sha}" >> "${GITHUB_OUTPUT}"
+          echo "base_sha=${base_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact PashamCrafts head
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ steps.request.outputs.expected_head_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_SCHEMA_WRITE_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: true
+          path: app
+
+      - name: Merge finalized foundation and resolve routes additively
+        id: merge
+        working-directory: app
+        shell: bash
+        env:
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+          TARGET_BRANCH: ${{ steps.request.outputs.target_branch }}
+          EXPECTED_HEAD_SHA: ${{ steps.request.outputs.expected_head_sha }}
+          BASE_SHA: ${{ steps.request.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          git config user.name "pashamcrafts-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${TARGET_BRANCH}" "${EXPECTED_HEAD_SHA}"
+
+          set +e
+          git merge --no-commit --no-ff "${BASE_SHA}"
+          merge_status=$?
+          set -e
+          if [ "${merge_status}" -gt 1 ]; then
+            echo "::error::Git merge failed unexpectedly with status ${merge_status}"
+            exit "${merge_status}"
+          fi
+
+          conflicts="$(git diff --name-only --diff-filter=U | sort)"
+          while IFS= read -r conflict; do
+            [ -z "${conflict}" ] && continue
+            if [ "${conflict}" != "config/routes.rb" ]; then
+              echo "::error::Unexpected merge conflict: ${conflict}"
+              exit 1
+            fi
+          done <<< "${conflicts}"
+
+          if grep -Fxq "config/routes.rb" <<< "${conflicts}"; then
+            git checkout "${BASE_SHA}" -- config/routes.rb
+            python3 <<'PY'
+          from pathlib import Path
+
+          routes = Path("config/routes.rb")
+          text = routes.read_text()
+
+          queue_anchor = '''    resources :inquiries, only: %i[index show update] do
+              member { post :conversion, action: :convert }
+            end
+          '''
+          operations_routes = '''    resources :materials, only: %i[index show] do
+              post :create_movement, on: :member
+            end
+            resources :material_purchases, only: %i[index new create]
+            resources :suppliers, except: %i[show destroy]
+            get "cost-profiles", to: "cost_profiles#index", as: :cost_profiles
+            resources :product_variants, only: [] do
+              resource :cost_profile, only: %i[edit update], controller: "cost_profiles" do
+                post :snapshot
+              end
+            end
+          '''
+          if queue_anchor not in text:
+              raise SystemExit("Admin inquiry route anchor not found")
+          text = text.replace(queue_anchor, queue_anchor + operations_routes, 1)
+
+          product_anchor = '''    resources :products, only: [] do
+              resources :variants, controller: "product_variants", except: %i[index show]
+            end
+          '''
+          product_routes = '''    resources :products, only: [] do
+              resource :cost_profile, only: %i[edit update], controller: "cost_profiles" do
+                post :snapshot
+              end
+              resources :variants, controller: "product_variants", except: %i[index show]
+            end
+          '''
+          if product_anchor not in text:
+              raise SystemExit("Admin product route anchor not found")
+          text = text.replace(product_anchor, product_routes, 1)
+          routes.write_text(text)
+          PY
+          fi
+
+          git add -A
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "::error::Unresolved merge conflicts remain"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+          git diff --cached --check
+          git commit -m "Merge finalized inquiry foundation into materials and costing (${REQUEST_ID})"
+
+          remote_head="$(git ls-remote origin "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')"
+          test "${remote_head}" = "${EXPECTED_HEAD_SHA}"
+          git push origin "HEAD:refs/heads/${TARGET_BRANCH}"
+          echo "new_head_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+
+  publish:
+    if: always()
+    needs: sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish sync result
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ needs.sync.result }}
+          NEW_HEAD_SHA: ${{ needs.sync.outputs.new_head_sha }}
+        run: |
+          set -euo pipefail
+          if [ "${RESULT}" = success ]; then
+            state=success
+            description="Issue 93 synchronized at ${NEW_HEAD_SHA:0:12}"
+          else
+            state=failure
+            description="Issue 93 controlled branch synchronization failed"
+          fi
+          payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/issue93-sync" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
