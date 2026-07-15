@@ -1,0 +1,7 @@
+{
+  "request_id": "issue-92-sync-after-116-1",
+  "target_branch": "feature/issue-92-inquiries",
+  "expected_head_sha": "12c5107f97e63ed7c6874e0898de1d057abb61b5",
+  "base_sha": "acc4c47774d50c00a2d26792b74b032efb6a4d49",
+  "resolution": "issue-92-after-116"
+}
