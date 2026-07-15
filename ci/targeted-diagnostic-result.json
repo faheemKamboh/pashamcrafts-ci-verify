@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-93-cost-profile-coverage-1",
-  "target_sha": "5d5be167076c8f4abf2f52b844d754e9977047b8",
-  "detail": "2 examples, 0 failures; no failure detail"
+  "request_id": "issue-73-targeted-1",
+  "target_sha": "0b2f5f94d29823e6522bb58547baa77cc20b4969",
+  "detail": "13 examples, 3 failures; ./spec/models/cart_item_spec.rb:26 | ActiveRecord::RecordNotUnique: PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \"index_inventory_balances_on_product_variant_id\" || ./spec/services/carts/merge_spec.rb:34 | RSpec::Expectations::ExpectationNotMetError: expected \"Combined after sign in. 5 can be supplied now, but requests above this quantity are disabled.\" to include \"Only 5\" || ./spec/requests/carts_spec.rb:61 | ActiveRecord::RecordNotUnique: PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \"index_inventory_balances_on_product_variant_id\""
 }
