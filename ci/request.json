@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-74-checkout-paths-targeted-1",
-  "target_sha": "1bccf00de6463fe12eea4211a96abc315f310883",
+  "request_id": "issue-74-checkout-paths-targeted-2",
+  "target_sha": "d9930b613d87b0e602018a9716cff9d7fefc6884",
   "checks": ["targeted"],
   "specs": [
     "spec/models/checkout_reservation_spec.rb",
