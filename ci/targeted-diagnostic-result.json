@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-73-targeted-3",
-  "target_sha": "0a61f92cc7dc4ee6e82e147bb17dc91f3e6c35a7",
-  "detail": "13 examples, 0 failures; no failure detail"
+  "request_id": "issue-73-edge-targeted-1",
+  "target_sha": "6f0db252777de5c88cd9590e12a16caeb7e54090",
+  "detail": "5 examples, 0 failures; no failure detail"
 }
