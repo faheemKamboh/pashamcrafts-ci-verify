@@ -114,7 +114,7 @@ jobs:
           command_status=$?
           summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/rspec.log" | tail -n 1 || true)"
           coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/rspec.log" | tail -n 1 | awk '{print $3}' || true)"
-          failed="$(grep -E '^rspec \./spec/' "${RUNNER_TEMP}/rspec.log" | head -n 1 || true)"
+          failed="$(grep -E '^rspec \./spec/' "${RUNNER_TEMP}/rspec.log" | head -n 20 | awk 'BEGIN { separator = "" } { printf "%s%s", separator, $0; separator = " | " } END { print "" }' || true)"
           coverage_status=1
           if [ -n "${coverage}" ]; then
             awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
@@ -123,7 +123,7 @@ jobs:
           if [ "${command_status}" -eq 0 ] && [ "${coverage_status}" -eq 0 ]; then result=success; else result=failure; fi
           detail="${summary:-summary unavailable}; coverage=${coverage:-unavailable}; command=${command_status}"
           [ -z "${failed}" ] || detail="${detail}; ${failed}"
-          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-400)"
+          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-1800)"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
           echo "${detail}"
