@@ -1,6 +1,10 @@
 {
-  "request_id": "issue-73-full-2",
-  "target_sha": "6f0db252777de5c88cd9590e12a16caeb7e54090",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-94-targeted-1",
+  "target_sha": "c0ea0f1cea4b1825dfa50b39f91fd02855fbe028",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/delivery/quote_spec.rb",
+    "spec/services/delivery/snapshot_and_override_spec.rb",
+    "spec/requests/admin/delivery_operations_spec.rb"
+  ]
 }
