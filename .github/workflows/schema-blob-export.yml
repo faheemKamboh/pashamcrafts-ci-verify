@@ -158,8 +158,8 @@ jobs:
           current_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/branches/${encoded_branch}" | jq -er '.commit.sha')"
           test "${current_sha}" = "${TARGET_SHA}"
 
-          encoded="$(base64 -w0 db/schema.rb)"
-          schema_blob="$(jq -n --arg content "${encoded}" '{content: $content, encoding: "base64"}' | curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/blobs" --data-binary @- | jq -er '.sha')"
+          jq -Rs '{content: @base64, encoding: "base64"}' db/schema.rb > "${RUNNER_TEMP}/schema-blob.json"
+          schema_blob="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/blobs" --data-binary @"${RUNNER_TEMP}/schema-blob.json" | jq -er '.sha')"
           existing_blob="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/contents/db/schema.rb?ref=${TARGET_SHA}" | jq -er '.sha')"
 
           if [ "${schema_blob}" = "${existing_blob}" ]; then
