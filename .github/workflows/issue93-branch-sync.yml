@@ -114,58 +114,80 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
 
-          product = Path("app/models/product.rb")
-          text = product.read_text()
-          anchor = "  has_many :orders, dependent: :nullify\n"
-          additions = "  has_one :cost_profile, as: :costable, dependent: :restrict_with_error\n  has_many :cost_snapshots, as: :snapshotable, dependent: :restrict_with_error\n"
-          if anchor not in text:
-              raise SystemExit("Product association anchor not found")
-          product.write_text(text.replace(anchor, anchor + additions, 1))
+          def insert_after(path, anchor, additions, duplicate_marker):
+              lines = path.read_text().splitlines()
+              if duplicate_marker in lines:
+                  return
+              try:
+                  index = lines.index(anchor)
+              except ValueError as error:
+                  raise SystemExit(f"Anchor not found in {path}: {anchor}") from error
+              lines[index + 1:index + 1] = additions
+              path.write_text("\n".join(lines) + "\n")
 
-          variant = Path("app/models/product_variant.rb")
-          text = variant.read_text()
-          anchor = "  has_many :availability_requests, inverse_of: :product_variant, dependent: :restrict_with_error\n"
-          additions = "  has_one :cost_profile, as: :costable, dependent: :restrict_with_error\n  has_many :cost_snapshots, as: :snapshotable, dependent: :restrict_with_error\n"
-          if anchor not in text:
-              raise SystemExit("ProductVariant association anchor not found")
-          variant.write_text(text.replace(anchor, anchor + additions, 1))
+          insert_after(
+              Path("app/models/product.rb"),
+              "  has_many :orders, dependent: :nullify",
+              [
+                  "  has_one :cost_profile, as: :costable, dependent: :restrict_with_error",
+                  "  has_many :cost_snapshots, as: :snapshotable, dependent: :restrict_with_error",
+              ],
+              "  has_one :cost_profile, as: :costable, dependent: :restrict_with_error",
+          )
+
+          insert_after(
+              Path("app/models/product_variant.rb"),
+              "  has_many :availability_requests, inverse_of: :product_variant, dependent: :restrict_with_error",
+              [
+                  "  has_one :cost_profile, as: :costable, dependent: :restrict_with_error",
+                  "  has_many :cost_snapshots, as: :snapshotable, dependent: :restrict_with_error",
+              ],
+              "  has_one :cost_profile, as: :costable, dependent: :restrict_with_error",
+          )
 
           routes = Path("config/routes.rb")
-          text = routes.read_text()
-          queue_anchor = '''    resources :inquiries, only: %i[index show update] do
-              member { post :conversion, action: :convert }
-            end
-          '''
-          operations_routes = '''    resources :materials, only: %i[index show] do
-              post :create_movement, on: :member
-            end
-            resources :material_purchases, only: %i[index new create]
-            resources :suppliers, except: %i[show destroy]
-            get "cost-profiles", to: "cost_profiles#index", as: :cost_profiles
-            resources :product_variants, only: [] do
-              resource :cost_profile, only: %i[edit update], controller: "cost_profiles" do
-                post :snapshot
-              end
-            end
-          '''
-          if queue_anchor not in text:
-              raise SystemExit("Admin inquiry route anchor not found")
-          text = text.replace(queue_anchor, queue_anchor + operations_routes, 1)
+          lines = routes.read_text().splitlines()
 
-          product_anchor = '''    resources :products, only: [] do
-              resources :variants, controller: "product_variants", except: %i[index show]
-            end
-          '''
-          product_routes = '''    resources :products, only: [] do
-              resource :cost_profile, only: %i[edit update], controller: "cost_profiles" do
-                post :snapshot
-              end
-              resources :variants, controller: "product_variants", except: %i[index show]
-            end
-          '''
-          if product_anchor not in text:
-              raise SystemExit("Admin product route anchor not found")
-          routes.write_text(text.replace(product_anchor, product_routes, 1))
+          materials_marker = "    resources :materials, only: %i[index show] do"
+          if materials_marker not in lines:
+              try:
+                  orders_index = lines.index("    resources :orders, only: %i[index show update] do")
+              except ValueError as error:
+                  raise SystemExit("Admin orders route anchor not found") from error
+              materials_routes = [
+                  "    resources :materials, only: %i[index show] do",
+                  "      post :create_movement, on: :member",
+                  "    end",
+                  "    resources :material_purchases, only: %i[index new create]",
+                  "    resources :suppliers, except: %i[show destroy]",
+                  '    get "cost-profiles", to: "cost_profiles#index", as: :cost_profiles',
+                  "    resources :product_variants, only: [] do",
+                  '      resource :cost_profile, only: %i[edit update], controller: "cost_profiles" do',
+                  "        post :snapshot",
+                  "      end",
+                  "    end",
+              ]
+              lines[orders_index:orders_index] = materials_routes
+
+          try:
+              products_index = lines.index("    resources :products, only: [] do")
+              variants_index = next(
+                  index
+                  for index in range(products_index + 1, len(lines))
+                  if lines[index] == '      resources :variants, controller: "product_variants", except: %i[index show]'
+              )
+          except (ValueError, StopIteration) as error:
+              raise SystemExit("Admin product variants route anchor not found") from error
+
+          product_cost_marker = '      resource :cost_profile, only: %i[edit update], controller: "cost_profiles" do'
+          if product_cost_marker not in lines[products_index:variants_index]:
+              lines[variants_index:variants_index] = [
+                  product_cost_marker,
+                  "        post :snapshot",
+                  "      end",
+              ]
+
+          routes.write_text("\n".join(lines) + "\n")
           PY
 
           diagnostic=stage-resolution
