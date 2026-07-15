@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-74-ready-checkout-targeted-1",
-  "target_sha": "b78d40eff5c0e0fbc334d89f471990c9e9fdd86d",
+  "request_id": "issue-74-checkout-paths-targeted-1",
+  "target_sha": "1bccf00de6463fe12eea4211a96abc315f310883",
   "checks": ["targeted"],
   "specs": [
     "spec/models/checkout_reservation_spec.rb",
@@ -9,8 +9,10 @@
     "spec/services/checkout/timer_resolver_spec.rb",
     "spec/services/checkout/cart_delivery_quote_spec.rb",
     "spec/services/checkout/create_reservation_spec.rb",
+    "spec/services/checkout/create_custom_advance_reservation_spec.rb",
     "spec/services/checkout/reservation_lifecycle_spec.rb",
     "spec/requests/checkouts_spec.rb",
+    "spec/requests/orders_spec.rb",
     "spec/requests/checkout_reservation_payment_review_spec.rb"
   ]
 }
