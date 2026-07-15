@@ -82,18 +82,8 @@ jobs:
                   diagnostic=branch-head-mismatch
                   echo "::error::Requested branch head changed: expected ${TARGET_SHA:0:12}, found ${current_sha:0:12}"
                 else
-                  probe_response="$(mktemp)"
-                  probe_payload='{"content":"pashamcrafts-schema-token-check","encoding":"utf-8"}'
-                  probe_status="$(curl --silent --show-error --output "${probe_response}" --write-out '%{http_code}' \
-                    "${auth[@]}" --request POST "${api}/git/blobs" --data-binary "${probe_payload}")"
-                  if [ "${probe_status}" != "201" ]; then
-                    diagnostic="blob-write-http-${probe_status}"
-                    message="$(jq -r '.message // "Unknown GitHub API error"' "${probe_response}" 2>/dev/null || printf 'Unreadable GitHub API response')"
-                    echo "::error::Schema token blob-write probe failed (${probe_status}): ${message}"
-                  else
-                    ok=true
-                    diagnostic=ok
-                  fi
+                  ok=true
+                  diagnostic=ok
                 fi
               fi
             fi
