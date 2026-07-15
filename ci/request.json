@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-94-targeted-1",
-  "target_sha": "c0ea0f1cea4b1825dfa50b39f91fd02855fbe028",
+  "request_id": "issue-94-targeted-2",
+  "target_sha": "4e5e56f0d3f567b75cd7123144f730aa1fd1002f",
   "checks": ["targeted"],
   "specs": [
     "spec/services/delivery/quote_spec.rb",
