@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-74-ready-checkout-targeted-1",
-  "target_sha": "b78d40eff5c0e0fbc334d89f471990c9e9fdd86d",
-  "detail": "40 examples, 0 failures; no failure detail"
+  "request_id": "issue-74-checkout-paths-targeted-1",
+  "target_sha": "1bccf00de6463fe12eea4211a96abc315f310883",
+  "detail": "59 examples, 1 failures; ./spec/requests/orders_spec.rb:131 | NoMethodError: undefined method 'orders' for an instance of User"
 }
