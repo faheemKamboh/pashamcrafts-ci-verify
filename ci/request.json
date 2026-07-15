@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-74-complete-targeted-1",
-  "target_sha": "a931116947e56160ca2e7dece5f6a09e370947b5",
+  "request_id": "issue-74-complete-targeted-2",
+  "target_sha": "2f1d06976591beac790d07af326d73cd96a766ed",
   "checks": ["targeted"],
   "specs": [
     "spec/models/checkout_reservation_spec.rb",
@@ -11,6 +11,7 @@
     "spec/services/checkout/create_reservation_spec.rb",
     "spec/services/checkout/create_custom_advance_reservation_spec.rb",
     "spec/services/checkout/reservation_lifecycle_spec.rb",
+    "spec/services/checkout/concurrent_allocation_spec.rb",
     "spec/jobs/checkout_reservation_expiry_job_spec.rb",
     "spec/requests/checkouts_spec.rb",
     "spec/requests/orders_spec.rb",
