@@ -63,7 +63,7 @@ jobs:
           persist-credentials: true
           path: app
 
-      - name: Merge finalized foundation and resolve routes additively
+      - name: Merge finalized foundation and resolve shared files additively
         id: merge
         working-directory: app
         shell: bash
@@ -90,20 +90,41 @@ jobs:
           conflicts="$(git diff --name-only --diff-filter=U | sort)"
           while IFS= read -r conflict; do
             [ -z "${conflict}" ] && continue
-            if [ "${conflict}" != "config/routes.rb" ]; then
-              echo "::error::Unexpected merge conflict: ${conflict}"
-              exit 1
-            fi
+            case "${conflict}" in
+              config/routes.rb|app/models/product.rb|app/models/product_variant.rb) ;;
+              *)
+                echo "::error::Unexpected merge conflict: ${conflict}"
+                exit 1
+                ;;
+            esac
           done <<< "${conflicts}"
 
-          if grep -Fxq "config/routes.rb" <<< "${conflicts}"; then
-            git checkout "${BASE_SHA}" -- config/routes.rb
-            python3 <<'PY'
+          git checkout "${BASE_SHA}" -- \
+            app/models/product.rb \
+            app/models/product_variant.rb \
+            config/routes.rb
+
+          python3 <<'PY'
           from pathlib import Path
+
+          product = Path("app/models/product.rb")
+          text = product.read_text()
+          anchor = "  has_many :orders, dependent: :nullify\n"
+          additions = "  has_one :cost_profile, as: :costable, dependent: :restrict_with_error\n  has_many :cost_snapshots, as: :snapshotable, dependent: :restrict_with_error\n"
+          if anchor not in text:
+              raise SystemExit("Product association anchor not found")
+          product.write_text(text.replace(anchor, anchor + additions, 1))
+
+          variant = Path("app/models/product_variant.rb")
+          text = variant.read_text()
+          anchor = "  has_many :availability_requests, inverse_of: :product_variant, dependent: :restrict_with_error\n"
+          additions = "  has_one :cost_profile, as: :costable, dependent: :restrict_with_error\n  has_many :cost_snapshots, as: :snapshotable, dependent: :restrict_with_error\n"
+          if anchor not in text:
+              raise SystemExit("ProductVariant association anchor not found")
+          variant.write_text(text.replace(anchor, anchor + additions, 1))
 
           routes = Path("config/routes.rb")
           text = routes.read_text()
-
           queue_anchor = '''    resources :inquiries, only: %i[index show update] do
               member { post :conversion, action: :convert }
             end
@@ -137,10 +158,8 @@ jobs:
           '''
           if product_anchor not in text:
               raise SystemExit("Admin product route anchor not found")
-          text = text.replace(product_anchor, product_routes, 1)
-          routes.write_text(text)
+          routes.write_text(text.replace(product_anchor, product_routes, 1))
           PY
-          fi
 
           git add -A
           if git diff --name-only --diff-filter=U | grep -q .; then
