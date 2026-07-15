@@ -1,6 +1,11 @@
 {
-  "request_id": "issue-93-full-3",
-  "target_sha": "5d5be167076c8f4abf2f52b844d754e9977047b8",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-73-targeted-1",
+  "target_sha": "0b2f5f94d29823e6522bb58547baa77cc20b4969",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/models/cart_spec.rb",
+    "spec/models/cart_item_spec.rb",
+    "spec/services/carts/merge_spec.rb",
+    "spec/requests/carts_spec.rb"
+  ]
 }
