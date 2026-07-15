@@ -109,6 +109,7 @@ jobs:
     outputs:
       commit_sha: ${{ steps.commit.outputs.commit_sha }}
       changed: ${{ steps.commit.outputs.changed }}
+      diagnostic: ${{ steps.commit.outputs.diagnostic }}
     services:
       postgres:
         image: postgres:16
@@ -144,6 +145,7 @@ jobs:
 
       - name: Create race-safe schema commit
         id: commit
+        continue-on-error: true
         shell: bash
         env:
           PRIVATE_TOKEN: ${{ secrets.PASHAMCRAFTS_SCHEMA_WRITE_TOKEN }}
@@ -154,29 +156,62 @@ jobs:
           set -euo pipefail
           api="https://api.github.com/repos/faheemKamboh/pashamcrafts"
           auth=(--header "Authorization: Bearer ${PRIVATE_TOKEN}" --header "Accept: application/vnd.github+json" --header "X-GitHub-Api-Version: 2022-11-28")
+          mark() { echo "diagnostic=$1" >> "${GITHUB_OUTPUT}"; }
+          echo "ok=false" >> "${GITHUB_OUTPUT}"
+          echo "changed=false" >> "${GITHUB_OUTPUT}"
+
+          mark branch-head-read
           encoded_branch="$(jq -rn --arg value "${TARGET_BRANCH}" '$value | @uri')"
           current_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/branches/${encoded_branch}" | jq -er '.commit.sha')"
           test "${current_sha}" = "${TARGET_SHA}"
 
+          mark schema-payload-build
           jq -Rs '{content: @base64, encoding: "base64"}' db/schema.rb > "${RUNNER_TEMP}/schema-blob.json"
+
+          mark schema-blob-create
           schema_blob="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/blobs" --data-binary @"${RUNNER_TEMP}/schema-blob.json" | jq -er '.sha')"
+
+          mark existing-schema-read
           existing_blob="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/contents/db/schema.rb?ref=${TARGET_SHA}" | jq -er '.sha')"
 
           if [ "${schema_blob}" = "${existing_blob}" ]; then
             echo "commit_sha=${TARGET_SHA}" >> "${GITHUB_OUTPUT}"
-            echo "changed=false" >> "${GITHUB_OUTPUT}"
+            echo "ok=true" >> "${GITHUB_OUTPUT}"
+            mark ok-no-change
             exit 0
           fi
 
+          mark base-tree-read
           base_tree="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/git/commits/${TARGET_SHA}" | jq -er '.tree.sha')"
-          tree_payload="$(jq -n --arg base_tree "${base_tree}" --arg blob "${schema_blob}" '{base_tree: $base_tree, tree: [{path: "db/schema.rb", mode: "100644", type: "blob", sha: $blob}]}')"
-          new_tree="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/trees" --data "${tree_payload}" | jq -er '.sha')"
-          commit_payload="$(jq -n --arg message "Commit generated schema (${REQUEST_ID})" --arg tree "${new_tree}" --arg parent "${TARGET_SHA}" '{message: $message, tree: $tree, parents: [$parent]}')"
-          new_commit="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/commits" --data "${commit_payload}" | jq -er '.sha')"
-          ref_payload="$(jq -n --arg sha "${new_commit}" '{sha: $sha, force: false}')"
-          curl --fail-with-body --silent --show-error "${auth[@]}" --request PATCH "${api}/git/refs/heads/${TARGET_BRANCH}" --data "${ref_payload}" > /dev/null
+
+          mark tree-create
+          jq -n --arg base_tree "${base_tree}" --arg blob "${schema_blob}" \
+            '{base_tree: $base_tree, tree: [{path: "db/schema.rb", mode: "100644", type: "blob", sha: $blob}]}' \
+            > "${RUNNER_TEMP}/tree.json"
+          new_tree="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/trees" --data-binary @"${RUNNER_TEMP}/tree.json" | jq -er '.sha')"
+
+          mark commit-create
+          jq -n --arg message "Commit generated schema (${REQUEST_ID})" --arg tree "${new_tree}" --arg parent "${TARGET_SHA}" \
+            '{message: $message, tree: $tree, parents: [$parent]}' > "${RUNNER_TEMP}/commit.json"
+          new_commit="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/commits" --data-binary @"${RUNNER_TEMP}/commit.json" | jq -er '.sha')"
+
+          mark branch-ref-update
+          jq -n --arg sha "${new_commit}" '{sha: $sha, force: false}' > "${RUNNER_TEMP}/ref.json"
+          encoded_ref="$(jq -rn --arg value "heads/${TARGET_BRANCH}" '$value | @uri')"
+          curl --fail-with-body --silent --show-error "${auth[@]}" --request PATCH "${api}/git/refs/${encoded_ref}" --data-binary @"${RUNNER_TEMP}/ref.json" > /dev/null
+
           echo "commit_sha=${new_commit}" >> "${GITHUB_OUTPUT}"
           echo "changed=true" >> "${GITHUB_OUTPUT}"
+          echo "ok=true" >> "${GITHUB_OUTPUT}"
+          mark ok
+
+      - name: Enforce schema commit
+        if: steps.commit.outputs.ok != 'true'
+        env:
+          DIAGNOSTIC: ${{ steps.commit.outputs.diagnostic }}
+        run: |
+          echo "::error::Schema commit failed during ${DIAGNOSTIC:-unknown}"
+          exit 1
 
   publish-result:
     if: always()
@@ -192,6 +227,7 @@ jobs:
           VERIFY_DIAGNOSTIC: ${{ needs.verify-request.outputs.diagnostic }}
           COMMIT_RESULT: ${{ needs.commit-schema.result }}
           COMMIT_SHA: ${{ needs.commit-schema.outputs.commit_sha }}
+          COMMIT_DIAGNOSTIC: ${{ needs.commit-schema.outputs.diagnostic }}
           CHANGED: ${{ needs.commit-schema.outputs.changed }}
         run: |
           set -euo pipefail
@@ -203,7 +239,7 @@ jobs:
             description="Schema committed at ${COMMIT_SHA:0:12}; changed=${CHANGED}"
           else
             state=failure
-            description="Schema generation or branch update failed"
+            description="Schema write failed (${COMMIT_DIAGNOSTIC:-unknown})"
           fi
           payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/schema-commit" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
           curl --fail-with-body --silent --show-error --request POST \
