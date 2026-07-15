@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-72-full-3",
-  "target_sha": "c8f1f450b14cca82e51b2d038f778ad8acc7956d",
-  "checks": ["full"],
+  "request_id": "foundation-post-issue-72-lint-1",
+  "target_sha": "acc4c47774d50c00a2d26792b74b032efb6a4d49",
+  "checks": ["lint"],
   "specs": []
 }
