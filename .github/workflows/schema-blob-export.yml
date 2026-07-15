@@ -150,7 +150,7 @@ jobs:
       - name: Generate exact schema
         run: bundle exec rails db:create db:migrate
 
-      - name: Create race-safe schema commit
+      - name: Commit generated schema through Contents API
         id: commit
         continue-on-error: true
         shell: bash
@@ -172,41 +172,45 @@ jobs:
           current_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/branches/${encoded_branch}" | jq -er '.commit.sha')"
           test "${current_sha}" = "${TARGET_SHA}"
 
-          mark schema-payload-build
-          jq -Rs '{content: @base64, encoding: "base64"}' db/schema.rb > "${RUNNER_TEMP}/schema-blob.json"
-
-          mark schema-blob-create
-          schema_blob="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/blobs" --data-binary @"${RUNNER_TEMP}/schema-blob.json" | jq -er '.sha')"
-
           mark existing-schema-read
-          existing_blob="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/contents/db/schema.rb?ref=${TARGET_SHA}" | jq -er '.sha')"
+          existing_response="$(mktemp)"
+          curl --fail-with-body --silent --show-error "${auth[@]}" \
+            "${api}/contents/db/schema.rb?ref=${TARGET_SHA}" > "${existing_response}"
+          existing_blob="$(jq -er '.sha' "${existing_response}")"
+          existing_content="$(jq -er '.content' "${existing_response}" | tr -d '\n')"
 
-          if [ "${schema_blob}" = "${existing_blob}" ]; then
+          mark schema-payload-build
+          generated_content="$(base64 -w0 db/schema.rb)"
+          if [ "${generated_content}" = "${existing_content}" ]; then
             echo "commit_sha=${TARGET_SHA}" >> "${GITHUB_OUTPUT}"
             echo "ok=true" >> "${GITHUB_OUTPUT}"
             mark ok-no-change
             exit 0
           fi
 
-          mark base-tree-read
-          base_tree="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/git/commits/${TARGET_SHA}" | jq -er '.tree.sha')"
+          mark branch-head-recheck
+          latest_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/branches/${encoded_branch}" | jq -er '.commit.sha')"
+          test "${latest_sha}" = "${TARGET_SHA}"
 
-          mark tree-create
-          jq -n --arg base_tree "${base_tree}" --arg blob "${schema_blob}" \
-            '{base_tree: $base_tree, tree: [{path: "db/schema.rb", mode: "100644", type: "blob", sha: $blob}]}' \
-            > "${RUNNER_TEMP}/tree.json"
-          new_tree="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/trees" --data-binary @"${RUNNER_TEMP}/tree.json" | jq -er '.sha')"
+          mark contents-update
+          jq -n \
+            --arg message "Commit generated schema (${REQUEST_ID})" \
+            --arg content "${generated_content}" \
+            --arg sha "${existing_blob}" \
+            --arg branch "${TARGET_BRANCH}" \
+            '{message: $message, content: $content, sha: $sha, branch: $branch}' \
+            > "${RUNNER_TEMP}/schema-update.json"
+          update_response="$(mktemp)"
+          update_status="$(curl --silent --show-error --output "${update_response}" --write-out '%{http_code}' \
+            "${auth[@]}" --request PUT "${api}/contents/db/schema.rb" \
+            --data-binary @"${RUNNER_TEMP}/schema-update.json")"
+          if [ "${update_status}" != "200" ] && [ "${update_status}" != "201" ]; then
+            message="$(jq -r '.message // "Unknown GitHub API error"' "${update_response}" 2>/dev/null || printf 'Unreadable GitHub API response')"
+            echo "::error::Schema contents update failed (${update_status}): ${message}"
+            exit 1
+          fi
 
-          mark commit-create
-          jq -n --arg message "Commit generated schema (${REQUEST_ID})" --arg tree "${new_tree}" --arg parent "${TARGET_SHA}" \
-            '{message: $message, tree: $tree, parents: [$parent]}' > "${RUNNER_TEMP}/commit.json"
-          new_commit="$(curl --fail-with-body --silent --show-error "${auth[@]}" --request POST "${api}/git/commits" --data-binary @"${RUNNER_TEMP}/commit.json" | jq -er '.sha')"
-
-          mark branch-ref-update
-          jq -n --arg sha "${new_commit}" '{sha: $sha, force: false}' > "${RUNNER_TEMP}/ref.json"
-          encoded_ref="$(jq -rn --arg value "heads/${TARGET_BRANCH}" '$value | @uri')"
-          curl --fail-with-body --silent --show-error "${auth[@]}" --request PATCH "${api}/git/refs/${encoded_ref}" --data-binary @"${RUNNER_TEMP}/ref.json" > /dev/null
-
+          new_commit="$(jq -er '.commit.sha' "${update_response}")"
           echo "commit_sha=${new_commit}" >> "${GITHUB_OUTPUT}"
           echo "changed=true" >> "${GITHUB_OUTPUT}"
           echo "ok=true" >> "${GITHUB_OUTPUT}"
