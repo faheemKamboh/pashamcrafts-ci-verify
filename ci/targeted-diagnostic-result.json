@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-73-targeted-2",
-  "target_sha": "6832c71ae0bbb9320abc82c8b937c547fa4232fd",
-  "detail": "13 examples, 2 failures; ./spec/models/cart_item_spec.rb:26 | ActiveRecord::RecordNotUnique: PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \"index_inventory_balances_on_product_variant_id\" || ./spec/requests/carts_spec.rb:61 | ActiveRecord::RecordNotUnique: PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \"index_inventory_balances_on_product_variant_id\""
+  "request_id": "issue-73-targeted-3",
+  "target_sha": "0a61f92cc7dc4ee6e82e147bb17dc91f3e6c35a7",
+  "detail": "13 examples, 0 failures; no failure detail"
 }
