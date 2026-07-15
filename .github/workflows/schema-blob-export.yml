@@ -55,30 +55,39 @@ jobs:
           set -euo pipefail
           ok=false
           diagnostic=unknown
+          api="https://api.github.com/repos/faheemKamboh/pashamcrafts"
+          auth=(--header "Authorization: Bearer ${PRIVATE_TOKEN}" --header "Accept: application/vnd.github+json" --header "X-GitHub-Api-Version: 2022-11-28")
 
           if [ -z "${PRIVATE_TOKEN}" ]; then
             diagnostic=secret-empty
           else
-            encoded_branch="$(jq -rn --arg value "${TARGET_BRANCH}" '$value | @uri')"
-            response_file="$(mktemp)"
-            status="$(curl --silent --show-error --output "${response_file}" --write-out '%{http_code}' \
-              --header "Authorization: Bearer ${PRIVATE_TOKEN}" \
-              --header "Accept: application/vnd.github+json" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/faheemKamboh/pashamcrafts/branches/${encoded_branch}")"
-
-            if [ "${status}" != "200" ]; then
-              diagnostic="http-${status}"
-              message="$(jq -r '.message // "Unknown GitHub API error"' "${response_file}" 2>/dev/null || printf 'Unreadable GitHub API response')"
-              echo "::error::Schema token branch lookup failed (${status}): ${message}"
+            repo_response="$(mktemp)"
+            repo_status="$(curl --silent --show-error --output "${repo_response}" --write-out '%{http_code}' "${auth[@]}" "${api}")"
+            if [ "${repo_status}" != "200" ]; then
+              diagnostic="repo-http-${repo_status}"
+              message="$(jq -r '.message // "Unknown GitHub API error"' "${repo_response}" 2>/dev/null || printf 'Unreadable GitHub API response')"
+              echo "::error::Schema token repository lookup failed (${repo_status}): ${message}"
+            elif [ "$(jq -r '.permissions.push // false' "${repo_response}")" != "true" ]; then
+              diagnostic=contents-write-denied
+              echo "::error::Schema token can read pashamcrafts but does not have Contents read/write permission"
             else
-              current_sha="$(jq -er '.commit.sha' "${response_file}")"
-              if [ "${current_sha}" != "${TARGET_SHA}" ]; then
-                diagnostic=branch-head-mismatch
-                echo "::error::Requested branch head changed: expected ${TARGET_SHA:0:12}, found ${current_sha:0:12}"
+              encoded_branch="$(jq -rn --arg value "${TARGET_BRANCH}" '$value | @uri')"
+              branch_response="$(mktemp)"
+              branch_status="$(curl --silent --show-error --output "${branch_response}" --write-out '%{http_code}' "${auth[@]}" "${api}/branches/${encoded_branch}")"
+
+              if [ "${branch_status}" != "200" ]; then
+                diagnostic="branch-http-${branch_status}"
+                message="$(jq -r '.message // "Unknown GitHub API error"' "${branch_response}" 2>/dev/null || printf 'Unreadable GitHub API response')"
+                echo "::error::Schema token branch lookup failed (${branch_status}): ${message}"
               else
-                ok=true
-                diagnostic=ok
+                current_sha="$(jq -er '.commit.sha' "${branch_response}")"
+                if [ "${current_sha}" != "${TARGET_SHA}" ]; then
+                  diagnostic=branch-head-mismatch
+                  echo "::error::Requested branch head changed: expected ${TARGET_SHA:0:12}, found ${current_sha:0:12}"
+                else
+                  ok=true
+                  diagnostic=ok
+                fi
               fi
             fi
           fi
