@@ -1,22 +1,8 @@
 {
-  "request_id": "issue-74-complete-targeted-4",
-  "target_sha": "3560a6ec02d3a48e44e2784a816f00f2ceafe36c",
+  "request_id": "issue-74-wording-targeted-1",
+  "target_sha": "eeb78efb104ef4210982994594ead4593e40c328",
   "checks": ["targeted"],
   "specs": [
-    "spec/models/checkout_reservation_spec.rb",
-    "spec/models/order_item_spec.rb",
-    "spec/services/checkout/reservation_policy_spec.rb",
-    "spec/services/checkout/timer_resolver_spec.rb",
-    "spec/services/checkout/cart_delivery_quote_spec.rb",
-    "spec/services/checkout/create_reservation_spec.rb",
-    "spec/services/checkout/create_custom_advance_reservation_spec.rb",
-    "spec/services/checkout/reservation_lifecycle_spec.rb",
-    "spec/services/checkout/concurrent_allocation_spec.rb",
-    "spec/jobs/checkout_reservation_expiry_job_spec.rb",
-    "spec/requests/checkouts_spec.rb",
-    "spec/requests/orders_spec.rb",
-    "spec/requests/checkout_reservation_payment_review_spec.rb",
-    "spec/requests/admin/checkout_reservations_spec.rb",
-    "spec/requests/admin/checkout_timer_rules_spec.rb"
+    "spec/requests/checkout_reservation_payment_review_spec.rb"
   ]
 }
