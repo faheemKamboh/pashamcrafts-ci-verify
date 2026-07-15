@@ -1,9 +1,6 @@
 {
-  "request_id": "issue-74-hardening-targeted-1",
-  "target_sha": "31e1222ce0649fc7b138c92f566b847e27ac1045",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/requests/checkout_reservation_payment_review_spec.rb",
-    "spec/requests/admin/checkout_timer_rules_spec.rb"
-  ]
+  "request_id": "issue-74-full-2",
+  "target_sha": "4a724e49a3794358e599306c3b45296fa32de243",
+  "checks": ["full"],
+  "specs": []
 }
