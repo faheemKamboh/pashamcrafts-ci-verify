@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-93-cost-profile-coverage-1",
+  "request_id": "issue-93-full-3",
   "target_sha": "5d5be167076c8f4abf2f52b844d754e9977047b8",
-  "checks": ["targeted"],
-  "specs": ["spec/models/cost_profile_spec.rb"]
+  "checks": ["full"],
+  "specs": []
 }
