@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-74-complete-targeted-3",
-  "target_sha": "a5b967cd44f4d3e88ed75c75c8f3d2d8e30fb473",
-  "detail": "73 examples, 2 failures; ./spec/jobs/checkout_reservation_expiry_job_spec.rb:66 | NameError: undefined local variable or method 'enqueued_jobs' for #<RSpec::ExampleGroups::CheckoutReservationExpiryJob:0x00007f9fc605e2f0> || ./spec/requests/admin/checkout_timer_rules_spec.rb:10 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n  <head>\\n    <title>New timer rule — PashamCrafts Admin</title...</div>\\n\\n            </main>\\n          </div>\\n        </div>\\n      </div>\\n  </body>\\n</html>\\n\" to include \"Crochet Product 42\" and \"Variant 39\""
+  "request_id": "issue-74-complete-targeted-4",
+  "target_sha": "3560a6ec02d3a48e44e2784a816f00f2ceafe36c",
+  "detail": "73 examples, 0 failures; no failure detail"
 }
