@@ -137,8 +137,8 @@ jobs:
         with:
           bundler-cache: true
 
-      - name: Generate exact schema
-        run: bundle exec rails db:create db:migrate
+      - name: Rebuild schema through the verification path
+        run: bundle exec rails db:create db:schema:load db:migrate
 
       - name: Commit generated schema through Contents API
         id: commit
