@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-93-final-lint-1",
-  "target_sha": "f8bcc68209fc1f291b24c280b5c47cca3df73e32",
-  "checks": [
-    "lint"
-  ],
+  "request_id": "issue-72-full-1",
+  "target_sha": "0a6ae0f8aadc13decb318cbd019f6649e07aaf1b",
+  "checks": ["full"],
   "specs": []
 }
