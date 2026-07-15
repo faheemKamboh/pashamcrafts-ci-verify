@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-94-targeted-1",
-  "target_sha": "c0ea0f1cea4b1825dfa50b39f91fd02855fbe028",
-  "detail": "14 examples, 4 failures; ./spec/services/delivery/quote_spec.rb:67 | RSpec::Expectations::ExpectationNotMetError: expected Delivery::Quote::Error with message matching /not active/, got #<ArgumentError: You are passing an instance of ActiveRecord::Base to `find`. Please pass the id of the object by calling `.id`.> with backtrace: || ./spec/requests/admin/delivery_operations_spec.rb:8 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n  <head>\\n    <title>Admin — PashamCrafts</title>\\n    <meta na...</div>\\n\\n            </main>\\n          </div>\\n        </div>\\n      </div>\\n  </body>\\n</html>\\n\" to include \"Delivery rates &amp; COD rules\" || ./spec/requests/admin/delivery_operations_spec.rb:25 | RSpec::Expectations::ExpectationNotMetError:    expected `CourierProvider.count` to have changed by 1, but was changed by 0 || ./spec/requests/admin/delivery_operations_spec.rb:124 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n  <head>\\n    <title>Admin — PashamCrafts</title>\\n    <meta na...</div>\\n\\n            </main>\\n          </div>\\n        </div>\\n      </div>\\n  </body>\\n</html>\\n\" to include \"Delivery &amp; COD snapshot\""
+  "request_id": "issue-94-targeted-2",
+  "target_sha": "4e5e56f0d3f567b75cd7123144f730aa1fd1002f",
+  "detail": "14 examples, 0 failures; no failure detail"
 }
