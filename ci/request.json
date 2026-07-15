@@ -1,6 +1,13 @@
 {
-  "request_id": "issue-94-full-2",
-  "target_sha": "32ead86c2e035b530ef27b9670c287ce64079c5e",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-74-foundation-targeted-1",
+  "target_sha": "00e5c01f3d97803e4f0cd08878188d94c41bea5e",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/models/checkout_reservation_spec.rb",
+    "spec/models/order_item_spec.rb",
+    "spec/services/checkout/reservation_policy_spec.rb",
+    "spec/services/checkout/timer_resolver_spec.rb",
+    "spec/services/checkout/create_reservation_spec.rb",
+    "spec/services/checkout/reservation_lifecycle_spec.rb"
+  ]
 }
