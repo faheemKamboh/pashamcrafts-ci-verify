@@ -1,0 +1,108 @@
+name: Sanitized targeted PashamCrafts diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ci/request.json"
+      - ".github/workflows/targeted-diagnostic.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  diagnose:
+    if: contains(fromJSON('[''targeted'']'), fromJSON('"targeted"'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+    steps:
+      - name: Checkout diagnostic request
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate targeted request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_sha="$(jq -er '.target_sha' ci/request.json)"
+          jq -e '.checks == ["targeted"]' ci/request.json > /dev/null
+          jq -e '.specs | type == "array" and length > 0 and all(test("^spec/[a-zA-Z0-9_./-]+_spec\\.rb$"))' ci/request.json > /dev/null
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+          jq -r '.specs[]' ci/request.json > "${RUNNER_TEMP}/specs.txt"
+
+      - name: Checkout exact PashamCrafts commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        run: test "$(git -C app rev-parse HEAD)" = "${{ steps.request.outputs.target_sha }}"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips postgresql-client
+
+      - name: Set up Ruby and gems
+        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+          working-directory: app
+
+      - name: Run targeted specs with sanitized JSON output
+        id: tests
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bundle exec rails db:create db:migrate > /dev/null 2>&1
+          mapfile -t specs < "${RUNNER_TEMP}/specs.txt"
+          bundle exec rspec "${specs[@]}" --format json --out "${RUNNER_TEMP}/rspec.json" > /dev/null 2>&1
+          status=$?
+          summary="$(jq -r '"\(.summary.example_count) examples, \(.summary.failure_count) failures"' "${RUNNER_TEMP}/rspec.json")"
+          failures="$(jq -r '[.examples[] | select(.status == "failed") | "\(.file_path):\(.line_number) | \(.exception.message | split("\n")[0])"] | join(" || ")' "${RUNNER_TEMP}/rspec.json" | cut -c1-1600)"
+          detail="${summary}; ${failures:-no failure detail}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
+          echo "TARGETED_DETAIL=${detail}"
+          exit 0
+
+      - name: Publish sanitized detail
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DETAIL: ${{ steps.tests.outputs.detail }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          description="$(printf '%s' "${DETAIL:-unavailable}" | cut -c1-130)"
+          payload="$(jq -n --arg state success --arg context "pashamcrafts/targeted-detail" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
