@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-93-edge-targeted-1",
-  "target_sha": "94170395eb8eeb5a744e7b6f2fda821338342ef3",
+  "request_id": "issue-93-edge-targeted-2",
+  "target_sha": "ababd2134f5e538a8eff1a9208e2c2d4d3ac2990",
   "checks": ["targeted"],
   "specs": ["spec/requests/materials_costing_edge_cases_spec.rb"]
 }
