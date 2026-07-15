@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-94-targeted-3",
-  "target_sha": "09240f25dfb89f3c99355dd725651dff27426c17",
-  "detail": "20 examples, 1 failures; ./spec/models/delivery_policy_models_spec.rb:5 | RSpec::Expectations::ExpectationNotMetError: expected: \"https://courier.example/track/PK+12%2F34\""
+  "request_id": "issue-94-targeted-4",
+  "target_sha": "5b0043b1378dbca52321266028087316c8655744",
+  "detail": "20 examples, 0 failures; no failure detail"
 }
