@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-74-complete-targeted-4",
-  "target_sha": "3560a6ec02d3a48e44e2784a816f00f2ceafe36c",
-  "detail": "73 examples, 0 failures; no failure detail"
+  "request_id": "issue-74-wording-targeted-1",
+  "target_sha": "eeb78efb104ef4210982994594ead4593e40c328",
+  "detail": "5 examples, 0 failures; no failure detail"
 }
