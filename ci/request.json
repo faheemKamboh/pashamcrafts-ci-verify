@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-72-full-1",
-  "target_sha": "0a6ae0f8aadc13decb318cbd019f6649e07aaf1b",
+  "request_id": "issue-72-full-2",
+  "target_sha": "92176e86901b57c21db627a6c53b06fef3ced096",
   "checks": ["full"],
   "specs": []
 }
