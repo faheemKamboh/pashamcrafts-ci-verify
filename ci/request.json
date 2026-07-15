@@ -1,16 +1,6 @@
 {
-  "request_id": "issue-93-targeted-2",
-  "target_sha": "033de47ef2f2c9614bce6a693cc430693b678f07",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/materials/ledger_spec.rb",
-    "spec/services/materials/record_purchase_spec.rb",
-    "spec/services/costing/create_snapshot_spec.rb",
-    "spec/requests/admin/materials_spec.rb",
-    "spec/requests/admin/material_purchases_spec.rb",
-    "spec/requests/admin/suppliers_spec.rb",
-    "spec/requests/admin/cost_profiles_spec.rb",
-    "spec/requests/admin/yarn_types_spec.rb",
-    "spec/requests/material_cost_privacy_spec.rb"
-  ]
+  "request_id": "issue-93-full-1",
+  "target_sha": "2223b8a392f4e20a49b9188cb25f47dfdc413b59",
+  "checks": ["full"],
+  "specs": []
 }
