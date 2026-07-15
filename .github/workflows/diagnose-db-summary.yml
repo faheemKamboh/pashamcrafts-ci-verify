@@ -93,6 +93,7 @@ jobs:
           coverage=unavailable
 
           if [ "${database_status}" -eq 0 ]; then
+            git diff -- db/schema.rb > "${RUNNER_TEMP}/schema.diff"
             git diff --quiet -- db/schema.rb
             schema_status=$?
             if [ "${schema_status}" -eq 0 ]; then
@@ -122,6 +123,26 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
           exit 0
+
+      - name: Encrypt private diagnostics
+        if: always()
+        shell: bash
+        run: |
+          bash ci/encrypt-diagnostics.sh \
+            "${RUNNER_TEMP}/encrypted-safe-db" \
+            "${RUNNER_TEMP}/database.log" \
+            "${RUNNER_TEMP}/schema.diff" \
+            "${RUNNER_TEMP}/rspec.log" \
+            "app/coverage/.resultset.json"
+
+      - name: Upload encrypted private diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: encrypted-safe-db-${{ github.run_id }}
+          path: ${{ runner.temp }}/encrypted-safe-db
+          retention-days: 1
+          if-no-files-found: error
 
   summary:
     needs: diagnose
