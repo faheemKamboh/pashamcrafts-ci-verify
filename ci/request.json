@@ -1,8 +1,9 @@
 {
-  "request_id": "issue-94-targeted-2",
-  "target_sha": "4e5e56f0d3f567b75cd7123144f730aa1fd1002f",
+  "request_id": "issue-94-targeted-3",
+  "target_sha": "09240f25dfb89f3c99355dd725651dff27426c17",
   "checks": ["targeted"],
   "specs": [
+    "spec/models/delivery_policy_models_spec.rb",
     "spec/services/delivery/quote_spec.rb",
     "spec/services/delivery/snapshot_and_override_spec.rb",
     "spec/requests/admin/delivery_operations_spec.rb"
