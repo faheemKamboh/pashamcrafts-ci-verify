@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-92-edge-targeted-2",
+  "request_id": "issue-92-full-2",
   "target_sha": "539e6347f8d6d222c7ed21e464155d5523706c78",
-  "checks": ["targeted"],
-  "specs": ["spec/requests/inquiry_edge_cases_spec.rb"]
+  "checks": ["full"],
+  "specs": []
 }
