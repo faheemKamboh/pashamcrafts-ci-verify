@@ -22,6 +22,8 @@ jobs:
       schema_detail: ${{ steps.schema.outputs.detail }}
       tests_result: ${{ steps.tests.outputs.result }}
       tests_detail: ${{ steps.tests.outputs.detail }}
+      lint_result: ${{ steps.lint.outputs.result }}
+      lint_detail: ${{ steps.lint.outputs.detail }}
     services:
       postgres:
         image: postgres:16
@@ -129,6 +131,30 @@ jobs:
           echo "${detail}"
           exit 0
 
+      - name: Summarize RuboCop
+        id: lint
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bundle exec rubocop --format json > "${RUNNER_TEMP}/rubocop.json" 2> "${RUNNER_TEMP}/rubocop.stderr"
+          command_status=$?
+          if jq -e '.summary' "${RUNNER_TEMP}/rubocop.json" > /dev/null 2>&1; then
+            offense_count="$(jq -r '.summary.offense_count' "${RUNNER_TEMP}/rubocop.json")"
+            inspected_count="$(jq -r '.summary.inspected_file_count' "${RUNNER_TEMP}/rubocop.json")"
+            offenses="$(jq -r '.files[] | .path as $path | .offenses[] | "\($path):\(.location.start_line):\(.location.start_column) \(.cop_name) \(.message)"' "${RUNNER_TEMP}/rubocop.json" | head -n 12 | awk 'BEGIN { separator = "" } { printf "%s%s", separator, $0; separator = " | " } END { print "" }')"
+            detail="${inspected_count} files; ${offense_count} offenses"
+            [ -z "${offenses}" ] || detail="${detail}; ${offenses}"
+          else
+            detail="RuboCop summary unavailable; command=${command_status}"
+          fi
+          if [ "${command_status}" -eq 0 ]; then result=success; else result=failure; fi
+          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-1800)"
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
+          echo "${detail}"
+          exit 0
+
   publish:
     if: always()
     needs: diagnose
@@ -144,6 +170,8 @@ jobs:
           SCHEMA_DETAIL: ${{ needs.diagnose.outputs.schema_detail }}
           TESTS_RESULT: ${{ needs.diagnose.outputs.tests_result }}
           TESTS_DETAIL: ${{ needs.diagnose.outputs.tests_detail }}
+          LINT_RESULT: ${{ needs.diagnose.outputs.lint_result }}
+          LINT_DETAIL: ${{ needs.diagnose.outputs.lint_detail }}
         run: |
           set -euo pipefail
           publish() {
@@ -160,5 +188,7 @@ jobs:
           }
           echo "SCHEMA_DETAIL=${SCHEMA_DETAIL:-unavailable}"
           echo "TESTS_DETAIL=${TESTS_DETAIL:-unavailable}"
+          echo "LINT_DETAIL=${LINT_DETAIL:-unavailable}"
           publish "pashamcrafts/schema-detail" "${SCHEMA_RESULT:-error}" "${SCHEMA_DETAIL:-unavailable}"
           publish "pashamcrafts/tests-detail" "${TESTS_RESULT:-error}" "${TESTS_DETAIL:-unavailable}"
+          publish "pashamcrafts/lint-detail" "${LINT_RESULT:-error}" "${LINT_DETAIL:-unavailable}"
