@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-74-complete-targeted-3",
-  "target_sha": "a5b967cd44f4d3e88ed75c75c8f3d2d8e30fb473",
+  "request_id": "issue-74-complete-targeted-4",
+  "target_sha": "3560a6ec02d3a48e44e2784a816f00f2ceafe36c",
   "checks": ["targeted"],
   "specs": [
     "spec/models/checkout_reservation_spec.rb",
