@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-93-edge-targeted-3",
-  "target_sha": "c7172b8285a8d40e31181e680c11880eaa60c90b",
-  "detail": "9 examples, 0 failures; no failure detail"
+  "request_id": "issue-93-cost-profile-coverage-1",
+  "target_sha": "5d5be167076c8f4abf2f52b844d754e9977047b8",
+  "detail": "2 examples, 0 failures; no failure detail"
 }
