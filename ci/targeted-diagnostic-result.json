@@ -1,0 +1,5 @@
+{
+  "request_id": "issue-93-edge-targeted-2",
+  "target_sha": "ababd2134f5e538a8eff1a9208e2c2d4d3ac2990",
+  "detail": "9 examples, 1 failures; ./spec/requests/materials_costing_edge_cases_spec.rb:219 | "
+}
