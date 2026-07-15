@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 15
     outputs:
       new_head_sha: ${{ steps.merge.outputs.new_head_sha }}
+      diagnostic: ${{ steps.merge.outputs.diagnostic }}
     steps:
       - name: Checkout sync request
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
@@ -74,36 +75,42 @@ jobs:
           BASE_SHA: ${{ steps.request.outputs.base_sha }}
         run: |
           set -euo pipefail
+          diagnostic=initializing
+          trap 'status=$?; echo "diagnostic=${diagnostic}" >> "${GITHUB_OUTPUT}"; trap - EXIT; exit ${status}' EXIT
           git config user.name "pashamcrafts-ci"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "${TARGET_BRANCH}" "${EXPECTED_HEAD_SHA}"
 
+          diagnostic=merge-foundation
           set +e
           git merge --no-commit --no-ff "${BASE_SHA}"
           merge_status=$?
           set -e
           if [ "${merge_status}" -gt 1 ]; then
-            echo "::error::Git merge failed unexpectedly with status ${merge_status}"
+            diagnostic="merge-status-${merge_status}"
             exit "${merge_status}"
           fi
 
+          diagnostic=validate-conflicts
           conflicts="$(git diff --name-only --diff-filter=U | sort)"
           while IFS= read -r conflict; do
             [ -z "${conflict}" ] && continue
             case "${conflict}" in
               config/routes.rb|app/models/product.rb|app/models/product_variant.rb) ;;
               *)
-                echo "::error::Unexpected merge conflict: ${conflict}"
+                diagnostic="unexpected-conflict-$(printf '%s' "${conflict}" | tr '/_' '--')"
                 exit 1
                 ;;
             esac
           done <<< "${conflicts}"
 
+          diagnostic=checkout-finalized-shared-files
           git checkout "${BASE_SHA}" -- \
             app/models/product.rb \
             app/models/product_variant.rb \
             config/routes.rb
 
+          diagnostic=resolve-shared-files
           python3 <<'PY'
           from pathlib import Path
 
@@ -161,19 +168,25 @@ jobs:
           routes.write_text(text.replace(product_anchor, product_routes, 1))
           PY
 
+          diagnostic=stage-resolution
           git add -A
           if git diff --name-only --diff-filter=U | grep -q .; then
-            echo "::error::Unresolved merge conflicts remain"
-            git diff --name-only --diff-filter=U
+            diagnostic=unresolved-conflicts
             exit 1
           fi
           git diff --cached --check
+
+          diagnostic=create-merge-commit
           git commit -m "Merge finalized inquiry foundation into materials and costing (${REQUEST_ID})"
 
+          diagnostic=verify-remote-head
           remote_head="$(git ls-remote origin "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')"
           test "${remote_head}" = "${EXPECTED_HEAD_SHA}"
+
+          diagnostic=push-merge-commit
           git push origin "HEAD:refs/heads/${TARGET_BRANCH}"
           echo "new_head_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+          diagnostic=ok
 
   publish:
     if: always()
@@ -187,6 +200,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RESULT: ${{ needs.sync.result }}
           NEW_HEAD_SHA: ${{ needs.sync.outputs.new_head_sha }}
+          DIAGNOSTIC: ${{ needs.sync.outputs.diagnostic }}
         run: |
           set -euo pipefail
           if [ "${RESULT}" = success ]; then
@@ -194,7 +208,7 @@ jobs:
             description="Issue 93 synchronized at ${NEW_HEAD_SHA:0:12}"
           else
             state=failure
-            description="Issue 93 controlled branch synchronization failed"
+            description="Issue 93 sync failed at ${DIAGNOSTIC:-unknown}"
           fi
           payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/issue93-sync" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
           curl --fail-with-body --silent --show-error --request POST \
