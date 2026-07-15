@@ -1,0 +1,146 @@
+name: Safe PashamCrafts database gate summary
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnose-db-summary.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      target_sha: ${{ steps.request.outputs.target_sha }}
+      database_result: ${{ steps.checks.outputs.database_result }}
+      schema_result: ${{ steps.checks.outputs.schema_result }}
+      schema_stat: ${{ steps.checks.outputs.schema_stat }}
+      tests_result: ${{ steps.checks.outputs.tests_result }}
+      rspec_summary: ${{ steps.checks.outputs.rspec_summary }}
+      coverage: ${{ steps.checks.outputs.coverage }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+    steps:
+      - name: Checkout verification configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Resolve current target
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_sha="$(jq -er '.target_sha' ci/request.json)"
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact PashamCrafts commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips postgresql-client
+
+      - name: Set up Ruby and gems
+        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+          working-directory: app
+
+      - name: Run safe checks
+        id: checks
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+
+          bundle exec rails db:create db:migrate > "${RUNNER_TEMP}/database.log" 2>&1
+          database_status=$?
+          if [ "${database_status}" -eq 0 ]; then database_result=success; else database_result=failure; fi
+
+          schema_result=skipped
+          schema_stat=unavailable
+          tests_result=skipped
+          rspec_summary=unavailable
+          coverage=unavailable
+
+          if [ "${database_status}" -eq 0 ]; then
+            git diff --quiet -- db/schema.rb
+            schema_status=$?
+            if [ "${schema_status}" -eq 0 ]; then
+              schema_result=success
+              schema_stat=clean
+            else
+              schema_result=failure
+              schema_stat="$(git diff --stat -- db/schema.rb | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g' | cut -c1-240)"
+            fi
+
+            bundle exec rspec --format progress > "${RUNNER_TEMP}/rspec.log" 2>&1
+            tests_status=$?
+            rspec_summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/rspec.log" | tail -n 1 || true)"
+            coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/rspec.log" | tail -n 1 | awk '{print $3}' || true)"
+            [ -n "${rspec_summary}" ] || rspec_summary=unavailable
+            [ -n "${coverage}" ] || coverage=unavailable
+            if [ "${tests_status}" -eq 0 ]; then tests_result=success; else tests_result=failure; fi
+          fi
+
+          {
+            echo "database_result=${database_result}"
+            echo "schema_result=${schema_result}"
+            echo "schema_stat=${schema_stat}"
+            echo "tests_result=${tests_result}"
+            echo "rspec_summary=${rspec_summary}"
+            echo "coverage=${coverage}"
+          } >> "${GITHUB_OUTPUT}"
+
+          exit 0
+
+  summary:
+    needs: diagnose
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print safe summary
+        env:
+          TARGET_SHA: ${{ needs.diagnose.outputs.target_sha }}
+          DATABASE_RESULT: ${{ needs.diagnose.outputs.database_result }}
+          SCHEMA_RESULT: ${{ needs.diagnose.outputs.schema_result }}
+          SCHEMA_STAT: ${{ needs.diagnose.outputs.schema_stat }}
+          TESTS_RESULT: ${{ needs.diagnose.outputs.tests_result }}
+          RSPEC_SUMMARY: ${{ needs.diagnose.outputs.rspec_summary }}
+          COVERAGE: ${{ needs.diagnose.outputs.coverage }}
+        run: |
+          echo "Target: ${TARGET_SHA}"
+          echo "Database: ${DATABASE_RESULT}"
+          echo "Schema: ${SCHEMA_RESULT}"
+          echo "Schema stat: ${SCHEMA_STAT}"
+          echo "Tests: ${TESTS_RESULT}"
+          echo "RSpec: ${RSPEC_SUMMARY}"
+          echo "Coverage: ${COVERAGE}%"
