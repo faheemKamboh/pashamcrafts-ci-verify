@@ -1,0 +1,147 @@
+name: Diagnose PashamCrafts coverage gaps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ci/coverage-request.json"
+      - ".github/workflows/coverage-gaps.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    outputs:
+      target_sha: ${{ steps.request.outputs.target_sha }}
+      detail: ${{ steps.gaps.outputs.detail }}
+      coverage: ${{ steps.gaps.outputs.coverage }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+    steps:
+      - name: Checkout coverage request
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate exact request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          request_id="$(jq -er '.request_id' ci/coverage-request.json)"
+          target_sha="$(jq -er '.target_sha' ci/coverage-request.json)"
+          [[ "${request_id}" =~ ^[a-z0-9][a-z0-9._-]{0,79}$ ]]
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact PashamCrafts commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        run: test "$(git -C app rev-parse HEAD)" = "${{ steps.request.outputs.target_sha }}"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips postgresql-client
+
+      - name: Set up Ruby and gems
+        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+          working-directory: app
+
+      - name: Prepare database and run suite
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bundle exec rails db:create db:migrate
+          bundle exec rspec --format progress > "${RUNNER_TEMP}/rspec.log" 2>&1
+          grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/rspec.log" | tail -n 1 || true
+          exit 0
+
+      - name: Extract uncovered line groups
+        id: gaps
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          readarray -t values < <(bundle exec ruby -rjson -e '
+            data = JSON.parse(File.read("coverage/.resultset.json"))
+            result = data.values.max_by { |entry| entry.fetch("timestamp", 0) }
+            coverage = result.fetch("coverage")
+            root = Dir.pwd + "/"
+            total = 0
+            covered = 0
+            gaps = coverage.filter_map do |path, metrics|
+              lines = metrics.is_a?(Hash) ? metrics["lines"] : metrics
+              next unless lines
+              executable = lines.compact
+              total += executable.length
+              covered += executable.count { |value| value.to_i.positive? }
+              missed = lines.each_index.select { |index| lines[index] == 0 }.map { |index| index + 1 }
+              next if missed.empty?
+              relative = path.delete_prefix(root)
+              [missed.length, "#{relative}:#{missed.first(40).join(",")}"]
+            end
+            percentage = total.zero? ? 0 : (covered.fdiv(total) * 100).round(2)
+            puts percentage
+            puts gaps.sort_by { |count, _| -count }.first(15).map(&:last).join(" | ")
+          ')
+          coverage="${values[0]:-unavailable}"
+          detail="${values[1]:-no uncovered locations found}"
+          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-1800)"
+          echo "coverage=${coverage}" >> "${GITHUB_OUTPUT}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
+          echo "Coverage: ${coverage}%"
+          echo "Coverage gaps: ${detail}"
+
+  publish:
+    if: always()
+    needs: diagnose
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish sanitized coverage locations
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COVERAGE: ${{ needs.diagnose.outputs.coverage }}
+          DETAIL: ${{ needs.diagnose.outputs.detail }}
+        run: |
+          set -euo pipefail
+          echo "COVERAGE_DETAIL=${DETAIL:-unavailable}"
+          description="coverage=${COVERAGE:-unavailable}; $(printf '%s' "${DETAIL:-unavailable}" | cut -c1-105)"
+          payload="$(jq -n --arg state success --arg context "pashamcrafts/coverage-detail" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
