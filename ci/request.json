@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-74-wording-targeted-1",
-  "target_sha": "eeb78efb104ef4210982994594ead4593e40c328",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/requests/checkout_reservation_payment_review_spec.rb"
-  ]
+  "request_id": "issue-74-full-1",
+  "target_sha": "1bfb09e7c0e6fce8a9850236a0ba2d06d350094c",
+  "checks": ["full"],
+  "specs": []
 }
