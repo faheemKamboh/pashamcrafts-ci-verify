@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-93-targeted-1",
-  "target_sha": "101a646f7e1cf679b14633bca8b2291816bf9cc2",
+  "request_id": "issue-93-targeted-2",
+  "target_sha": "033de47ef2f2c9614bce6a693cc430693b678f07",
   "checks": ["targeted"],
   "specs": [
     "spec/services/materials/ledger_spec.rb",
@@ -10,6 +10,7 @@
     "spec/requests/admin/material_purchases_spec.rb",
     "spec/requests/admin/suppliers_spec.rb",
     "spec/requests/admin/cost_profiles_spec.rb",
+    "spec/requests/admin/yarn_types_spec.rb",
     "spec/requests/material_cost_privacy_spec.rb"
   ]
 }
