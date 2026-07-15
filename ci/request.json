@@ -1,6 +1,9 @@
 {
-  "request_id": "issue-73-full-1",
-  "target_sha": "27abb60d76b48bf74a44751d31ded78c638a6d73",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-73-edge-targeted-1",
+  "target_sha": "6f0db252777de5c88cd9590e12a16caeb7e54090",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/requests/cart_error_boundaries_spec.rb",
+    "spec/services/carts/merge_edge_cases_spec.rb"
+  ]
 }
