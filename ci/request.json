@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-73-targeted-2",
-  "target_sha": "6832c71ae0bbb9320abc82c8b937c547fa4232fd",
+  "request_id": "issue-73-targeted-3",
+  "target_sha": "0a61f92cc7dc4ee6e82e147bb17dc91f3e6c35a7",
   "checks": ["targeted"],
   "specs": [
     "spec/models/cart_spec.rb",
