@@ -1,0 +1,223 @@
+name: Sync dependent PashamCrafts branch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ci/branch-sync-request.json"
+      - ".github/workflows/branch-sync.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  verify-request:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      request_id: ${{ steps.request.outputs.request_id }}
+      target_branch: ${{ steps.request.outputs.target_branch }}
+      expected_head_sha: ${{ steps.request.outputs.expected_head_sha }}
+      base_sha: ${{ steps.request.outputs.base_sha }}
+      resolution: ${{ steps.request.outputs.resolution }}
+    steps:
+      - name: Validate exact sync request
+        id: request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRIVATE_TOKEN: ${{ secrets.PASHAMCRAFTS_SCHEMA_WRITE_TOKEN }}
+        run: |
+          set -euo pipefail
+          response="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/contents/ci/branch-sync-request.json?ref=${GITHUB_SHA}")"
+          request="$(jq -er '.content' <<< "${response}" | tr -d '\n' | base64 --decode)"
+
+          request_id="$(jq -er '.request_id' <<< "${request}")"
+          target_branch="$(jq -er '.target_branch' <<< "${request}")"
+          expected_head_sha="$(jq -er '.expected_head_sha' <<< "${request}")"
+          base_sha="$(jq -er '.base_sha' <<< "${request}")"
+          resolution="$(jq -er '.resolution' <<< "${request}")"
+
+          [[ "${request_id}" =~ ^[a-z0-9][a-z0-9._-]{0,79}$ ]]
+          [[ "${target_branch}" =~ ^feature/issue-[0-9]+-[a-z0-9-]+$ ]]
+          [[ "${expected_head_sha}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${base_sha}" =~ ^[0-9a-f]{40}$ ]]
+          test "${resolution}" = "issue-92-after-116"
+          test -n "${PRIVATE_TOKEN}"
+
+          api="https://api.github.com/repos/faheemKamboh/pashamcrafts"
+          auth=(--header "Authorization: Bearer ${PRIVATE_TOKEN}" --header "Accept: application/vnd.github+json" --header "X-GitHub-Api-Version: 2022-11-28")
+          encoded_branch="$(jq -rn --arg value "${target_branch}" '$value | @uri')"
+          current_sha="$(curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/branches/${encoded_branch}" | jq -er '.commit.sha')"
+          test "${current_sha}" = "${expected_head_sha}"
+          curl --fail-with-body --silent --show-error "${auth[@]}" "${api}/commits/${base_sha}" > /dev/null
+
+          echo "request_id=${request_id}" >> "${GITHUB_OUTPUT}"
+          echo "target_branch=${target_branch}" >> "${GITHUB_OUTPUT}"
+          echo "expected_head_sha=${expected_head_sha}" >> "${GITHUB_OUTPUT}"
+          echo "base_sha=${base_sha}" >> "${GITHUB_OUTPUT}"
+          echo "resolution=${resolution}" >> "${GITHUB_OUTPUT}"
+
+  sync-branch:
+    needs: verify-request
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      new_head_sha: ${{ steps.sync.outputs.new_head_sha }}
+    steps:
+      - name: Checkout exact PashamCrafts head
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ needs.verify-request.outputs.expected_head_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_SCHEMA_WRITE_TOKEN }}
+          fetch-depth: 0
+
+      - name: Merge finalized foundation with controlled resolutions
+        id: sync
+        shell: bash
+        env:
+          TARGET_BRANCH: ${{ needs.verify-request.outputs.target_branch }}
+          EXPECTED_HEAD_SHA: ${{ needs.verify-request.outputs.expected_head_sha }}
+          BASE_SHA: ${{ needs.verify-request.outputs.base_sha }}
+          REQUEST_ID: ${{ needs.verify-request.outputs.request_id }}
+        run: |
+          set -euo pipefail
+          git config user.name "pashamcrafts-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${TARGET_BRANCH}" "${EXPECTED_HEAD_SHA}"
+
+          set +e
+          git merge --no-commit --no-ff "${BASE_SHA}"
+          merge_status=$?
+          set -e
+          if [ "${merge_status}" -gt 1 ]; then
+            echo "::error::Git merge failed unexpectedly with status ${merge_status}"
+            exit "${merge_status}"
+          fi
+
+          conflicts="$(git diff --name-only --diff-filter=U | sort)"
+          allowed_conflicts=$'app/views/admin/shared/_sidebar.html.erb\napp/views/products/show.html.erb\napp/views/shared/_storefront_footer.html.erb\nconfig/routes.rb'
+          while IFS= read -r conflict; do
+            [ -z "${conflict}" ] && continue
+            if ! grep -Fxq "${conflict}" <<< "${allowed_conflicts}"; then
+              echo "::error::Unexpected merge conflict: ${conflict}"
+              exit 1
+            fi
+          done <<< "${conflicts}"
+
+          git checkout "${BASE_SHA}" -- \
+            app/views/admin/shared/_sidebar.html.erb \
+            app/views/products/show.html.erb \
+            app/views/shared/_storefront_footer.html.erb \
+            config/routes.rb
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          sidebar = Path("app/views/admin/shared/_sidebar.html.erb")
+          text = sidebar.read_text()
+          old = '        <div class="<%= planned_link %>" aria-disabled="true" title="Planned for Phase 2"><span class="h-2 w-2 rounded-full bg-stone-700"></span><span>Inquiries</span><span class="ml-auto text-[10px] font-semibold">P2</span></div>'
+          new = '''        <% inquiries_active = controller_path.start_with?("admin/inquiries") %>
+                  <%= link_to admin_inquiries_path, class: "#{base_link} #{inquiries_active ? active_link : inactive_link}", aria: { current: inquiries_active ? "page" : nil } do %>
+                    <span class="h-2 w-2 rounded-full <%= inquiries_active ? 'bg-amber-300' : 'bg-stone-600 group-hover:bg-stone-400' %>" aria-hidden="true"></span><span>Inquiries</span>
+                  <% end %>'''
+          if old not in text:
+              raise SystemExit("sidebar inquiry placeholder anchor not found")
+          sidebar.write_text(text.replace(old, new, 1))
+
+          product = Path("app/views/products/show.html.erb")
+          text = product.read_text()
+          anchor = '      <% if @product.made_to_order? %><div class="mt-6 rounded-3xl border border-rose-100 bg-white p-6 shadow-sm"><h2 class="text-lg font-extrabold text-stone-950">Need different details?</h2><p class="mt-2 text-sm leading-6 text-stone-600">Use the custom-order flow for different measurements, colours, yarn, or design requirements.</p><%= link_to "Start custom order", new_order_path(product_id: @product.id), class: "mt-4 inline-flex w-full justify-center rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-4 py-3 font-extrabold text-fuchsia-800 hover:border-fuchsia-400" %></div><% end %>'
+          inquiry_card = '''
+                <div class="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-6">
+                  <h2 class="text-lg font-extrabold text-stone-950">Need help before ordering?</h2>
+                  <p class="mt-2 text-sm leading-6 text-stone-600">Ask about sizing, colours, gifting, availability, or a product detail. This does not create an order or reserve stock.</p>
+                  <%= link_to "Ask about this product", new_inquiry_path(inquiry_kind: "product_help", product_id: @product.id, product_variant_id: @selected_variant&.id), class: "mt-4 inline-flex w-full justify-center rounded-xl border border-stone-300 bg-white px-4 py-3 font-extrabold text-stone-800 hover:border-fuchsia-300 hover:text-fuchsia-800" %>
+                </div>'''
+          if anchor not in text:
+              raise SystemExit("product inquiry insertion anchor not found")
+          product.write_text(text.replace(anchor, anchor + inquiry_card, 1))
+
+          footer = Path("app/views/shared/_storefront_footer.html.erb")
+          text = footer.read_text()
+          old = '    <div class="rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 to-amber-50 p-5"><h2 class="font-bold text-stone-950">Need product help?</h2><p class="mt-2 text-sm leading-6 text-stone-600">Use search for published answers, or contact the business manually when the configured contact option is available.</p><% whatsapp_number = Settings::Resolver.value("notifications.whatsapp_number").to_s %><% if whatsapp_number.gsub(/[^0-9]/, "").present? %><%= link_to "Open WhatsApp", whatsapp_url("Hi PashamCrafts, I need help choosing a crochet product."), target: "_blank", rel: "noopener", class: "mt-4 inline-flex rounded-xl bg-fuchsia-700 px-4 py-3 text-sm font-bold text-white" %><% end %></div>'
+          new = '''    <div class="rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 to-amber-50 p-5">
+                <h2 class="font-bold text-stone-950">Need product help?</h2>
+                <p class="mt-2 text-sm leading-6 text-stone-600">Search published answers or send a controlled inquiry for product, gift, or general help.</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <%= link_to "Ask a question", new_inquiry_path(inquiry_kind: "general"), class: "inline-flex rounded-xl bg-fuchsia-700 px-4 py-3 text-sm font-bold text-white" %>
+                  <%= link_to "Gift help", new_inquiry_path(inquiry_kind: "gift_help"), class: "inline-flex rounded-xl border border-fuchsia-200 bg-white px-4 py-3 text-sm font-bold text-fuchsia-800" %>
+                </div>
+                <p class="mt-3 text-xs leading-5 text-stone-500">An inquiry never creates an order, reserves stock, or requests payment.</p>
+              </div>'''
+          if old not in text:
+              raise SystemExit("footer help anchor not found")
+          footer.write_text(text.replace(old, new, 1))
+
+          routes = Path("config/routes.rb")
+          text = routes.read_text()
+          public_anchor = '  resources :availability_requests, only: :create\n'
+          admin_anchor = '    resources :availability_requests, only: %i[index show update]\n'
+          if public_anchor not in text or admin_anchor not in text:
+              raise SystemExit("routes inquiry anchors not found")
+          text = text.replace(public_anchor, public_anchor + '  resources :inquiries, only: %i[new create]\n', 1)
+          text = text.replace(
+              admin_anchor,
+              admin_anchor + '    resources :inquiries, only: %i[index show update] do\n      member { post :conversion, action: :convert }\n    end\n',
+              1,
+          )
+          routes.write_text(text)
+          PY
+
+          git add -A
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "::error::Unresolved merge conflicts remain"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+          git diff --cached --check
+          git commit -m "Merge finalized SEO foundation into inquiry intake (${REQUEST_ID})"
+
+          remote_head="$(git ls-remote origin "refs/heads/${TARGET_BRANCH}" | awk '{print $1}')"
+          test "${remote_head}" = "${EXPECTED_HEAD_SHA}"
+          git push origin "HEAD:refs/heads/${TARGET_BRANCH}"
+          echo "new_head_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+
+  publish-result:
+    if: always()
+    needs: [verify-request, sync-branch]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish sync result
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_RESULT: ${{ needs.verify-request.result }}
+          SYNC_RESULT: ${{ needs.sync-branch.result }}
+          NEW_HEAD_SHA: ${{ needs.sync-branch.outputs.new_head_sha }}
+        run: |
+          set -euo pipefail
+          if [ "${VERIFY_RESULT}" != success ]; then
+            state=failure
+            description="Branch sync request verification failed"
+          elif [ "${SYNC_RESULT}" = success ]; then
+            state=success
+            description="Branch synchronized at ${NEW_HEAD_SHA:0:12}"
+          else
+            state=failure
+            description="Controlled branch synchronization failed"
+          fi
+          payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/branch-sync" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            --data "${payload}" > /dev/null
