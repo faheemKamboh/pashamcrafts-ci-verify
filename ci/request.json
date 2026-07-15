@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-72-privacy-targeted-1",
+  "request_id": "issue-72-full-3",
   "target_sha": "c8f1f450b14cca82e51b2d038f778ad8acc7956d",
-  "checks": ["targeted"],
-  "specs": ["spec/services/privacy/request_submission_spec.rb"]
+  "checks": ["full"],
+  "specs": []
 }
