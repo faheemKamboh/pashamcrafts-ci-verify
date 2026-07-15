@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-74-complete-targeted-1",
-  "target_sha": "a931116947e56160ca2e7dece5f6a09e370947b5",
-  "detail": "67 examples, 1 failures; ./spec/requests/admin/checkout_reservations_spec.rb:103 | RSpec::Expectations::ExpectationNotMetError: expected \"param is missing or the value is empty or invalid: reason\" to include \"reason is required\""
+  "request_id": "issue-74-complete-targeted-2",
+  "target_sha": "2f1d06976591beac790d07af326d73cd96a766ed",
+  "detail": "68 examples, 1 failures; ./spec/jobs/checkout_reservation_expiry_job_spec.rb:66 | RSpec::Expectations::ExpectationNotMetError: expected to enqueue exactly 1 jobs, with [#<RSpec::Mocks::ArgumentMatchers::KindOf:0x00007f413e06f2a8 @klass=Integer>], at 2026-07-15 22:18:41 1743515/2097152 +0000, but enqueued 0"
 }
