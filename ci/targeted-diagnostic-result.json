@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-74-compatibility-targeted-2",
-  "target_sha": "28f736b8f91bc11ddf08835e97838949adef0686",
-  "detail": "32 examples, 4 failures; ./spec/models/order_spec.rb:9 | RSpec::Expectations::ExpectationNotMetError: Expected Order to have a belongs_to association called size_option (and for the record not to fail validation if :size_option is unset; i.e., either the association should have been defined with `optional: true`, or there should not be a presence validation on :size_option) || ./spec/models/order_spec.rb:10 | RSpec::Expectations::ExpectationNotMetError: Expected Order to have a belongs_to association called complexity_tier (and for the record not to fail validation if :complexity_tier is unset; i.e., either the association should have been defined with `optional: true`, or there should not be a presence validation on :complexity_tier) || ./spec/models/order_spec.rb:11 | RSpec::Expectations::ExpectationNotMetError: Expected Order to have a belongs_to association called yarn_type (and for the record not to fail validation if :yarn_type is unset; i.e., either the association should have been defined with `optional: true`, or there should not be a presence validation on :yarn_type) || ./spec/models/order_spec.rb:77 | RSpec::Expectations::ExpectationNotMetError: Expected Order to define :order_type as an enum backed by an integer,"
+  "request_id": "issue-74-order-model-targeted-1",
+  "target_sha": "e6087e3aa07f1176068f212f91068b43e613eb13",
+  "detail": "19 examples, 0 failures; no failure detail"
 }
