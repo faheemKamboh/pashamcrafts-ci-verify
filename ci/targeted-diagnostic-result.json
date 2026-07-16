@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-74-coverage-targeted-1",
-  "target_sha": "a36e8798ab0a2bfd157fd547770d8d321919fc66",
-  "detail": "25 examples, 0 failures; no failure detail"
+  "request_id": "issue-74-checkout-errors-targeted-1",
+  "target_sha": "2f9f9de31ef264f5db9dc4447ee7e7a5ef9e2750",
+  "detail": "8 examples, 0 failures; no failure detail"
 }
