@@ -1,8 +1,8 @@
 {
-  "request_id": "issue-74-coverage-4",
-  "target_sha": "421413b40c3ddcda29f1c4cca6a2f1d34d146364",
-  "summary": "936 examples, 0 failures",
-  "coverage": "97.96",
+  "request_id": "issue-74-coverage-5",
+  "target_sha": "b9179ba183b2fbdbef9baf530246ccf97569da1d",
+  "summary": "938 examples, 0 failures",
+  "coverage": "97.99",
   "command_status": 2,
   "uncovered": [
     {
@@ -46,17 +46,6 @@
       ],
       "executable_lines": 137,
       "missed_count": 6
-    },
-    {
-      "file": "app/services/checkout/create_custom_advance_reservation.rb",
-      "missing_lines": [
-        37,
-        125,
-        137,
-        195
-      ],
-      "executable_lines": 69,
-      "missed_count": 4
     },
     {
       "file": "app/controllers/admin/base_controller.rb",
@@ -238,6 +227,15 @@
         124
       ],
       "executable_lines": 90,
+      "missed_count": 2
+    },
+    {
+      "file": "app/services/checkout/create_custom_advance_reservation.rb",
+      "missing_lines": [
+        37,
+        125
+      ],
+      "executable_lines": 69,
       "missed_count": 2
     },
     {
