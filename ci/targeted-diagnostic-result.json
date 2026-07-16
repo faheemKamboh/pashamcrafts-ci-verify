@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-75-payment-requests-targeted-2",
-  "target_sha": "6951586ce4783c0ced7653c544f0815b67fe5e38",
-  "detail": "42 examples, 1 failures; ./spec/requests/upload_proof_spec.rb:36 | ArgumentError: You must pass either an argument or a block to `expect`. | ./spec/requests/upload_proof_spec.rb:41:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-75-request-boundary-1",
+  "target_sha": "e13d30ce20f6bb43e53e3af178d6ff15ea589f1d",
+  "detail": "50 examples, 1 failures; ./spec/models/payment_proof_spec.rb:26 | RSpec::Expectations::ExpectationNotMetError: expected `PaymentProof.count` not to have changed, but did change from 0 to 1 | ./spec/models/payment_proof_spec.rb:27:in 'block (2 levels) in <top (required)>'"
 }
