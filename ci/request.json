@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-74-order-model-targeted-1",
+  "request_id": "issue-74-full-4",
   "target_sha": "e6087e3aa07f1176068f212f91068b43e613eb13",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/models/order_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
