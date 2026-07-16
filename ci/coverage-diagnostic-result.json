@@ -1,8 +1,8 @@
 {
-  "request_id": "issue-74-coverage-2",
-  "target_sha": "a36e8798ab0a2bfd157fd547770d8d321919fc66",
-  "summary": "932 examples, 0 failures",
-  "coverage": "97.86",
+  "request_id": "issue-74-coverage-3",
+  "target_sha": "2f9f9de31ef264f5db9dc4447ee7e7a5ef9e2750",
+  "summary": "934 examples, 0 failures",
+  "coverage": "97.92",
   "command_status": 2,
   "uncovered": [
     {
@@ -32,19 +32,6 @@
         35
       ],
       "executable_lines": 37,
-      "missed_count": 6
-    },
-    {
-      "file": "app/controllers/checkouts_controller.rb",
-      "missing_lines": [
-        55,
-        56,
-        58,
-        59,
-        107,
-        109
-      ],
-      "executable_lines": 75,
       "missed_count": 6
     },
     {
@@ -109,6 +96,16 @@
         60
       ],
       "executable_lines": 35,
+      "missed_count": 3
+    },
+    {
+      "file": "app/controllers/checkouts_controller.rb",
+      "missing_lines": [
+        58,
+        59,
+        109
+      ],
+      "executable_lines": 75,
       "missed_count": 3
     },
     {
