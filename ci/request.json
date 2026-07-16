@@ -1,6 +1,8 @@
 {
-  "request_id": "issue-74-full-7",
-  "target_sha": "421413b40c3ddcda29f1c4cca6a2f1d34d146364",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-74-custom-guards-targeted-1",
+  "target_sha": "b9179ba183b2fbdbef9baf530246ccf97569da1d",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/checkout/create_custom_advance_reservation_spec.rb"
+  ]
 }
