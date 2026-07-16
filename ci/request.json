@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-75-request-boundary-1",
-  "target_sha": "e13d30ce20f6bb43e53e3af178d6ff15ea589f1d",
+  "request_id": "issue-75-request-boundary-2",
+  "target_sha": "fb8fa2f4d2b2aa95bd3d16aa526eefdd691959c5",
   "checks": ["targeted"],
   "specs": [
     "spec/models/payment_proof_spec.rb",
