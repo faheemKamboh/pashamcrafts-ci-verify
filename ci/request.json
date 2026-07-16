@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-75-payment-domain-targeted-2",
-  "target_sha": "9d5d3ee8b6649657f784bf8b31265663aa67debf",
+  "request_id": "issue-75-payment-domain-targeted-3",
+  "target_sha": "b1b5e07be9ab63f872bb98fd94b6a2ef87199123",
   "checks": ["targeted"],
   "specs": [
     "spec/services/public_references/generator_spec.rb",
