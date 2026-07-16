@@ -1,10 +1,8 @@
 {
-  "request_id": "issue-74-compatibility-targeted-2",
-  "target_sha": "28f736b8f91bc11ddf08835e97838949adef0686",
+  "request_id": "issue-74-order-model-targeted-1",
+  "target_sha": "e6087e3aa07f1176068f212f91068b43e613eb13",
   "checks": ["targeted"],
   "specs": [
-    "spec/models/order_spec.rb",
-    "spec/requests/admin/dashboard_spec.rb",
-    "spec/requests/storefront_catalog_spec.rb"
+    "spec/models/order_spec.rb"
   ]
 }
