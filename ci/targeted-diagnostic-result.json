@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-75-payment-requests-targeted-1",
-  "target_sha": "401548ccb0e6b5306b415cf4ec1869574bcc2aa3",
-  "detail": "41 examples, 5 failures; ./spec/requests/upload_proof_spec.rb:35 | ArgumentError: You must pass either an argument or a block to `expect`. || ./spec/requests/upload_proof_spec.rb:70 | AbstractController::DoubleRenderError: Render and/or redirect were called multiple times in this action. Please note that you may only call render OR redirect, and at most once per action. Also note that neither redirect nor render terminate execution of the action, so if you want to exit an action after redirecting, you need to do something like \"redirect_to(...); return\". || ./spec/requests/orders_spec.rb:214 | ActionView::Template::Error: Unknown setting key || ./spec/requests/orders_spec.rb:226 | ActionView::Template::Error: Unknown setting key || ./spec/requests/order_tracking_spec.rb:60 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\" dir=\\\"ltr\\\">\\n  <head>\\n    <title>PashamCrafts</title>\\n    <met...text-stone-500\\\">© 2026 PashamCrafts. All rights reserved.</div>\\n</footer>\\n\\n  </body>\\n</html>\\n\" to include \"JazzCash\" and \"EasyPaisa\""
+  "request_id": "issue-75-payment-requests-targeted-2",
+  "target_sha": "6951586ce4783c0ced7653c544f0815b67fe5e38",
+  "detail": "42 examples, 1 failures; ./spec/requests/upload_proof_spec.rb:36 | ArgumentError: You must pass either an argument or a block to `expect`."
 }
