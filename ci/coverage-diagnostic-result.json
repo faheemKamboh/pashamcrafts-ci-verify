@@ -1,44 +1,10 @@
 {
-  "request_id": "coverage-workflow-29485056475",
-  "target_sha": "e6087e3aa07f1176068f212f91068b43e613eb13",
-  "summary": "924 examples, 0 failures",
-  "coverage": "97.48",
+  "request_id": "issue-74-coverage-2",
+  "target_sha": "a36e8798ab0a2bfd157fd547770d8d321919fc66",
+  "summary": "932 examples, 0 failures",
+  "coverage": "97.86",
   "command_status": 2,
   "uncovered": [
-    {
-      "file": "app/controllers/admin/checkout_timer_rules_controller.rb",
-      "missing_lines": [
-        54,
-        55,
-        85,
-        86,
-        87,
-        88,
-        111,
-        112,
-        122,
-        124
-      ],
-      "executable_lines": 75,
-      "missed_count": 10
-    },
-    {
-      "file": "app/services/checkout/create_reservation.rb",
-      "missing_lines": [
-        46,
-        50,
-        134,
-        138,
-        141,
-        145,
-        155,
-        158,
-        194,
-        264
-      ],
-      "executable_lines": 116,
-      "missed_count": 10
-    },
     {
       "file": "app/controllers/admin/content_pages_controller.rb",
       "missing_lines": [
@@ -92,19 +58,6 @@
         233
       ],
       "executable_lines": 137,
-      "missed_count": 6
-    },
-    {
-      "file": "app/services/checkout/reservation_lifecycle.rb",
-      "missing_lines": [
-        33,
-        36,
-        37,
-        53,
-        96,
-        161
-      ],
-      "executable_lines": 108,
       "missed_count": 6
     },
     {
@@ -186,6 +139,16 @@
         84
       ],
       "executable_lines": 63,
+      "missed_count": 3
+    },
+    {
+      "file": "app/services/checkout/create_reservation.rb",
+      "missing_lines": [
+        46,
+        50,
+        158
+      ],
+      "executable_lines": 116,
       "missed_count": 3
     },
     {
@@ -342,6 +305,14 @@
       "missed_count": 1
     },
     {
+      "file": "app/controllers/admin/checkout_timer_rules_controller.rb",
+      "missing_lines": [
+        111
+      ],
+      "executable_lines": 75,
+      "missed_count": 1
+    },
+    {
       "file": "app/controllers/admin/cost_profiles_controller.rb",
       "missing_lines": [
         67
@@ -403,6 +374,14 @@
         21
       ],
       "executable_lines": 15,
+      "missed_count": 1
+    },
+    {
+      "file": "app/models/courier_provider.rb",
+      "missing_lines": [
+        45
+      ],
+      "executable_lines": 31,
       "missed_count": 1
     }
   ]
