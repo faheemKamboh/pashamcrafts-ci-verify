@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   diagnose:
-    if: contains(fromJSON('[''targeted'']'), fromJSON('"targeted"'))
+    if: contains(fromJSON('["targeted"]'), fromJSON('"targeted"'))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
@@ -85,9 +85,9 @@ jobs:
           set +e
           bundle exec rails db:create db:migrate > /dev/null 2>&1
           mapfile -t specs < "${RUNNER_TEMP}/specs.txt"
-          bundle exec rspec "${specs[@]}" --format json --out "${RUNNER_TEMP}/rspec.json" > /dev/null 2>&1
+          bundle exec rspec "${specs[@]}" --format json --out "${RUNNER_TEMP}/rspec.json" > "${RUNNER_TEMP}/rspec.log" 2>&1
           summary="$(jq -r '"\(.summary.example_count) examples, \(.summary.failure_count) failures"' "${RUNNER_TEMP}/rspec.json")"
-          failures="$(jq -r '[.examples[] | select(.status == "failed") | "\(.file_path):\(.line_number) | \(.exception.class): \((.exception.message | split("\n") | map(select(length > 0)) | .[0]) // "no message")"] | join(" || ")' "${RUNNER_TEMP}/rspec.json" | cut -c1-1600)"
+          failures="$(jq -r '[.examples[] | select(.status == "failed") | "\(.file_path):\(.line_number) | \(.exception.class): \((.exception.message | split("\n") | map(select(length > 0)) | .[0]) // "no message") | \((.exception.backtrace[0]) // "no backtrace")"] | join(" || ")' "${RUNNER_TEMP}/rspec.json" | cut -c1-1800)"
           detail="${summary}; ${failures:-no failure detail}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
           echo "TARGETED_DETAIL=${detail}"
