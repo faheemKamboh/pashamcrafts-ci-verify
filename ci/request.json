@@ -1,6 +1,10 @@
 {
-  "request_id": "issue-74-full-9",
-  "target_sha": "8bb41dfe73164d24ad29c12249642145e31e95e8",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-75-payment-foundation-targeted-1",
+  "target_sha": "990058e5f863bd1b1dde30e9c11433e957295453",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/public_references/generator_spec.rb",
+    "spec/services/payments/proof_preparer_spec.rb",
+    "spec/services/payments/submit_spec.rb"
+  ]
 }
