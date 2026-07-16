@@ -1,6 +1,10 @@
 {
-  "request_id": "issue-74-full-3",
-  "target_sha": "4a72e9acdf714490434356fd5d328c5c511aa122",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-74-compatibility-targeted-1",
+  "target_sha": "28f736b8f91bc11ddf08835e97838949adef0686",
+  "checks": ["targeted", "lint"],
+  "specs": [
+    "spec/models/order_spec.rb",
+    "spec/requests/admin/dashboard_spec.rb",
+    "spec/requests/storefront_catalog_spec.rb"
+  ]
 }
