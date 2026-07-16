@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-74-checkout-persistence-targeted-1",
+  "request_id": "issue-74-full-7",
   "target_sha": "421413b40c3ddcda29f1c4cca6a2f1d34d146364",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/requests/checkouts_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
