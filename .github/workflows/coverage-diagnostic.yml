@@ -1,0 +1,155 @@
+name: Sanitized PashamCrafts coverage gaps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/coverage-diagnostic.yml"
+      - "ci/coverage-diagnostic-request.json"
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+    steps:
+      - name: Checkout gateway repository
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: true
+          fetch-depth: 1
+
+      - name: Resolve diagnostic target
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          request_file=ci/coverage-diagnostic-request.json
+          if [ -f "${request_file}" ]; then
+            request_id="$(jq -er '.request_id' "${request_file}")"
+            target_sha="$(jq -er '.target_sha' "${request_file}")"
+          else
+            request_id="coverage-workflow-${GITHUB_RUN_ID}"
+            target_sha="$(jq -er '.target_sha' ci/diagnostic-request.json)"
+          fi
+          [[ "${request_id}" =~ ^[a-z0-9][a-z0-9._-]{0,79}$ ]]
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          echo "request_id=${request_id}" >> "${GITHUB_OUTPUT}"
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact PashamCrafts commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        run: test "$(git -C app rev-parse HEAD)" = "${{ steps.request.outputs.target_sha }}"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips postgresql-client
+
+      - name: Set up Ruby and gems
+        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+          working-directory: app
+
+      - name: Run complete suite
+        id: tests
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bundle exec rails db:create db:migrate > "${RUNNER_TEMP}/database.log" 2>&1
+          bundle exec rspec --format progress > "${RUNNER_TEMP}/rspec.log" 2>&1
+          status=$?
+          summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/rspec.log" | tail -n 1 || true)"
+          coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/rspec.log" | tail -n 1 | awk '{print $3}' || true)"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          echo "summary=${summary:-unavailable}" >> "${GITHUB_OUTPUT}"
+          echo "coverage=${coverage:-unavailable}" >> "${GITHUB_OUTPUT}"
+          exit 0
+
+      - name: Build sanitized coverage result
+        shell: bash
+        env:
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
+          COMMAND_STATUS: ${{ steps.tests.outputs.status }}
+          SUMMARY: ${{ steps.tests.outputs.summary }}
+          COVERAGE: ${{ steps.tests.outputs.coverage }}
+        run: |
+          set -euo pipefail
+          resultset=app/coverage/.resultset.json
+          if [ -f "${resultset}" ]; then
+            jq '
+              [to_entries[] | .value.coverage | to_entries[]]
+              | map(
+                  .key as $path
+                  | (.value.lines // .value) as $lines
+                  | {
+                      file: ($path | capture("/app/(?<relative>.*)").relative),
+                      missing_lines: [range(0; ($lines | length)) | select($lines[.] == 0) | . + 1],
+                      executable_lines: [$lines[] | select(. != null)] | length
+                    }
+                )
+              | map(select(.file | startswith("app/")))
+              | map(. + {missed_count: (.missing_lines | length)})
+              | map(select(.missed_count > 0))
+              | sort_by(-.missed_count, .file)
+              | .[0:40]
+            ' "${resultset}" > "${RUNNER_TEMP}/gaps.json"
+          else
+            printf '[]\n' > "${RUNNER_TEMP}/gaps.json"
+          fi
+
+          jq -n \
+            --arg request_id "${REQUEST_ID}" \
+            --arg target_sha "${TARGET_SHA}" \
+            --arg summary "${SUMMARY}" \
+            --arg coverage "${COVERAGE}" \
+            --argjson command_status "${COMMAND_STATUS:-1}" \
+            --slurpfile gaps "${RUNNER_TEMP}/gaps.json" \
+            '{
+              request_id: $request_id,
+              target_sha: $target_sha,
+              summary: $summary,
+              coverage: $coverage,
+              command_status: $command_status,
+              uncovered: $gaps[0]
+            }' > ci/coverage-diagnostic-result.json
+
+      - name: Commit sanitized coverage result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "pashamcrafts-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ci/coverage-diagnostic-result.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Record sanitized coverage gaps"
+          git push origin HEAD:main
