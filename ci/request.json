@@ -1,10 +1,6 @@
 {
-  "request_id": "issue-74-coverage-targeted-1",
+  "request_id": "issue-74-full-5",
   "target_sha": "a36e8798ab0a2bfd157fd547770d8d321919fc66",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/checkout/create_reservation_spec.rb",
-    "spec/requests/admin/checkout_timer_rules_spec.rb",
-    "spec/services/checkout/reservation_lifecycle_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
