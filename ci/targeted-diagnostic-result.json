@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-74-order-model-targeted-1",
-  "target_sha": "e6087e3aa07f1176068f212f91068b43e613eb13",
-  "detail": "19 examples, 0 failures; no failure detail"
+  "request_id": "issue-74-coverage-targeted-1",
+  "target_sha": "a36e8798ab0a2bfd157fd547770d8d321919fc66",
+  "detail": "25 examples, 0 failures; no failure detail"
 }
