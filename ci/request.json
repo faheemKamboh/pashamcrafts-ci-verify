@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-74-ready-stock-eligibility-targeted-1",
+  "request_id": "issue-74-full-9",
   "target_sha": "8bb41dfe73164d24ad29c12249642145e31e95e8",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/checkout/create_reservation_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
