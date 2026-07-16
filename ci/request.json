@@ -1,10 +1,12 @@
 {
-  "request_id": "issue-75-payment-foundation-targeted-1",
-  "target_sha": "990058e5f863bd1b1dde30e9c11433e957295453",
+  "request_id": "issue-75-payment-domain-targeted-1",
+  "target_sha": "77b6d3635d05268978d4f815efebb2a1900e8da3",
   "checks": ["targeted"],
   "specs": [
     "spec/services/public_references/generator_spec.rb",
     "spec/services/payments/proof_preparer_spec.rb",
-    "spec/services/payments/submit_spec.rb"
+    "spec/services/payments/submit_spec.rb",
+    "spec/services/payments/add_proof_spec.rb",
+    "spec/services/payments/review_spec.rb"
   ]
 }
