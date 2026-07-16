@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-74-checkout-errors-targeted-1",
+  "request_id": "issue-74-full-6",
   "target_sha": "2f9f9de31ef264f5db9dc4447ee7e7a5ef9e2750",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/requests/checkouts_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
