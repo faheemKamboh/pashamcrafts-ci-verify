@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-76-dashboard-schema-2",
-  "target_sha": "8bb4834f8247e437d999bea2d8b01f4000e6c679",
-  "branch": "feature/issue-76-customer-dashboard"
+  "request_id": "issue-76-pr124-schema-final-1",
+  "target_sha": "c6dab5185dfac4525906cc2fdda4819c8fe383ec",
+  "branch": "feature/issue-76-customer-access"
 }
