@@ -1,8 +1,8 @@
 {
-  "request_id": "issue-74-coverage-5",
-  "target_sha": "b9179ba183b2fbdbef9baf530246ccf97569da1d",
-  "summary": "938 examples, 0 failures",
-  "coverage": "97.99",
+  "request_id": "issue-75-coverage-1",
+  "target_sha": "874c926b1dc3b9baee1989e664860ab41a287f9c",
+  "summary": "974 examples, 0 failures",
+  "coverage": "97.44",
   "command_status": 2,
   "uncovered": [
     {
@@ -20,6 +20,33 @@
       ],
       "executable_lines": 48,
       "missed_count": 9
+    },
+    {
+      "file": "app/controllers/legacy_payment_proofs_controller.rb",
+      "missing_lines": [
+        3,
+        4,
+        5,
+        6,
+        8,
+        9,
+        10
+      ],
+      "executable_lines": 9,
+      "missed_count": 7
+    },
+    {
+      "file": "app/controllers/admin/orders_controller.rb",
+      "missing_lines": [
+        69,
+        70,
+        75,
+        76,
+        77,
+        125
+      ],
+      "executable_lines": 74,
+      "missed_count": 6
     },
     {
       "file": "app/controllers/admin/two_factor_challenges_controller.rb",
@@ -40,12 +67,72 @@
         11,
         111,
         113,
-        131,
-        162,
-        233
+        190,
+        251,
+        252
       ],
-      "executable_lines": 137,
+      "executable_lines": 127,
       "missed_count": 6
+    },
+    {
+      "file": "app/models/payment_proof.rb",
+      "missing_lines": [
+        48,
+        60,
+        65,
+        66,
+        77,
+        84
+      ],
+      "executable_lines": 64,
+      "missed_count": 6
+    },
+    {
+      "file": "app/services/payments/proof_preparer.rb",
+      "missing_lines": [
+        56,
+        65,
+        104,
+        105,
+        106,
+        107
+      ],
+      "executable_lines": 70,
+      "missed_count": 6
+    },
+    {
+      "file": "app/models/payment.rb",
+      "missing_lines": [
+        64,
+        85,
+        93,
+        99,
+        106
+      ],
+      "executable_lines": 66,
+      "missed_count": 5
+    },
+    {
+      "file": "app/models/payment_review.rb",
+      "missing_lines": [
+        29,
+        36,
+        41,
+        42
+      ],
+      "executable_lines": 28,
+      "missed_count": 4
+    },
+    {
+      "file": "app/services/payments/proof_scanner.rb",
+      "missing_lines": [
+        10,
+        11,
+        13,
+        19
+      ],
+      "executable_lines": 11,
+      "missed_count": 4
     },
     {
       "file": "app/controllers/admin/base_controller.rb",
@@ -55,16 +142,6 @@
         50
       ],
       "executable_lines": 34,
-      "missed_count": 3
-    },
-    {
-      "file": "app/controllers/admin/orders_controller.rb",
-      "missing_lines": [
-        71,
-        72,
-        111
-      ],
-      "executable_lines": 80,
       "missed_count": 3
     },
     {
@@ -85,6 +162,16 @@
         60
       ],
       "executable_lines": 35,
+      "missed_count": 3
+    },
+    {
+      "file": "app/controllers/payment_proofs_controller.rb",
+      "missing_lines": [
+        7,
+        19,
+        25
+      ],
+      "executable_lines": 33,
       "missed_count": 3
     },
     {
@@ -118,16 +205,6 @@
       "missed_count": 3
     },
     {
-      "file": "app/services/checkout/create_reservation.rb",
-      "missing_lines": [
-        46,
-        50,
-        158
-      ],
-      "executable_lines": 116,
-      "missed_count": 3
-    },
-    {
       "file": "app/services/checkout/reservation_policy.rb",
       "missing_lines": [
         65,
@@ -145,6 +222,16 @@
         96
       ],
       "executable_lines": 37,
+      "missed_count": 3
+    },
+    {
+      "file": "app/services/payments/review.rb",
+      "missing_lines": [
+        37,
+        171,
+        215
+      ],
+      "executable_lines": 120,
       "missed_count": 3
     },
     {
@@ -214,10 +301,10 @@
     {
       "file": "app/models/order.rb",
       "missing_lines": [
-        87,
-        94
+        141,
+        148
       ],
-      "executable_lines": 65,
+      "executable_lines": 94,
       "missed_count": 2
     },
     {
@@ -236,6 +323,15 @@
         125
       ],
       "executable_lines": 69,
+      "missed_count": 2
+    },
+    {
+      "file": "app/services/checkout/create_reservation.rb",
+      "missing_lines": [
+        46,
+        50
+      ],
+      "executable_lines": 116,
       "missed_count": 2
     },
     {
@@ -263,6 +359,15 @@
         202
       ],
       "executable_lines": 121,
+      "missed_count": 2
+    },
+    {
+      "file": "app/services/payments/submit.rb",
+      "missing_lines": [
+        39,
+        130
+      ],
+      "executable_lines": 74,
       "missed_count": 2
     },
     {
@@ -303,78 +408,6 @@
         67
       ],
       "executable_lines": 42,
-      "missed_count": 1
-    },
-    {
-      "file": "app/controllers/admin/inquiries_controller.rb",
-      "missing_lines": [
-        49
-      ],
-      "executable_lines": 56,
-      "missed_count": 1
-    },
-    {
-      "file": "app/controllers/admin/operational_alerts_controller.rb",
-      "missing_lines": [
-        26
-      ],
-      "executable_lines": 21,
-      "missed_count": 1
-    },
-    {
-      "file": "app/controllers/checkouts_controller.rb",
-      "missing_lines": [
-        109
-      ],
-      "executable_lines": 75,
-      "missed_count": 1
-    },
-    {
-      "file": "app/helpers/application_helper.rb",
-      "missing_lines": [
-        37
-      ],
-      "executable_lines": 64,
-      "missed_count": 1
-    },
-    {
-      "file": "app/jobs/checkout_reservation_expiry_job.rb",
-      "missing_lines": [
-        23
-      ],
-      "executable_lines": 13,
-      "missed_count": 1
-    },
-    {
-      "file": "app/models/cart_item.rb",
-      "missing_lines": [
-        50
-      ],
-      "executable_lines": 33,
-      "missed_count": 1
-    },
-    {
-      "file": "app/models/checkout_reservation.rb",
-      "missing_lines": [
-        60
-      ],
-      "executable_lines": 52,
-      "missed_count": 1
-    },
-    {
-      "file": "app/models/cost_snapshot.rb",
-      "missing_lines": [
-        21
-      ],
-      "executable_lines": 15,
-      "missed_count": 1
-    },
-    {
-      "file": "app/models/courier_provider.rb",
-      "missing_lines": [
-        45
-      ],
-      "executable_lines": 31,
       "missed_count": 1
     }
   ]
