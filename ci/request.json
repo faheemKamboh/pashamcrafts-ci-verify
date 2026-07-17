@@ -1,6 +1,13 @@
 {
-  "request_id": "issue-76-customer-access-full-1",
-  "target_sha": "f36a06f877012665df7edf46cc916e96ef6c4bfa",
-  "checks": ["tests", "lint", "security"],
-  "specs": []
+  "request_id": "issue-76-reconciled-targeted-1",
+  "target_sha": "19e6abf753366b02b0a7a9bd856872faa88bc613",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/customer_accounts/account_access_spec.rb",
+    "spec/requests/customer_account_access_spec.rb",
+    "spec/requests/customer_revoked_session_access_spec.rb",
+    "spec/requests/checkouts_spec.rb",
+    "spec/requests/orders_spec.rb",
+    "spec/requests/order_tracking_spec.rb"
+  ]
 }
