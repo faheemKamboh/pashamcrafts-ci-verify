@@ -1,0 +1,174 @@
+name: Publish sanitized full-suite diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "ci/full-diagnostic-request.json"
+      - ".github/workflows/full-diagnostic.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  diagnostic:
+    name: Full RSpec summary and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+
+    steps:
+      - name: Checkout verification repository
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          fetch-depth: 1
+
+      - name: Resolve diagnostic request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          request_id="$(jq -er '.request_id' ci/full-diagnostic-request.json)"
+          target_sha="$(jq -er '.target_sha' ci/full-diagnostic-request.json)"
+          [[ "${request_id}" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || { echo "Invalid request identifier."; exit 1; }
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid target SHA."; exit 1; }
+          echo "request_id=${request_id}" >> "${GITHUB_OUTPUT}"
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact PashamCrafts commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        run: test "$(git -C app rev-parse HEAD)" = "${{ steps.request.outputs.target_sha }}"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libvips postgresql-client
+
+      - name: Set up Ruby and gems
+        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+          working-directory: app
+
+      - name: Run and summarize complete suite
+        id: suite
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bundle exec rails db:create db:migrate > "${RUNNER_TEMP}/database.log" 2>&1
+          database_status=$?
+          command_status=1
+          summary=""
+          coverage=""
+
+          if [ "${database_status}" -eq 0 ]; then
+            bundle exec rspec --format progress > "${RUNNER_TEMP}/rspec.log" 2>&1
+            command_status=$?
+            summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/rspec.log" | tail -n 1 || true)"
+            coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/rspec.log" | tail -n 1 | awk '{print $3}' || true)"
+          fi
+
+          coverage_status=1
+          if [ -n "${coverage}" ]; then
+            awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
+            coverage_status=$?
+          fi
+
+          if [ "${database_status}" -ne 0 ]; then
+            result=failure
+            reason=database_failed
+          elif [ "${command_status}" -ne 0 ]; then
+            result=failure
+            reason=rspec_failed
+          elif [ -z "${coverage}" ]; then
+            result=failure
+            reason=coverage_unavailable
+          elif [ "${coverage_status}" -ne 0 ]; then
+            result=failure
+            reason=coverage_below_98
+          else
+            result=success
+            reason=passed
+          fi
+
+          summary="${summary:-RSpec summary unavailable}"
+          coverage="${coverage:-unavailable}"
+          {
+            echo "result=${result}"
+            echo "reason=${reason}"
+            echo "summary=${summary}"
+            echo "coverage=${coverage}"
+            echo "database_status=${database_status}"
+            echo "command_status=${command_status}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "RSpec: ${summary}"
+          echo "Line coverage: ${coverage}%"
+          echo "Diagnostic reason: ${reason}"
+
+      - name: Write sanitized diagnostic result
+        shell: bash
+        env:
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
+          RESULT: ${{ steps.suite.outputs.result }}
+          REASON: ${{ steps.suite.outputs.reason }}
+          SUMMARY: ${{ steps.suite.outputs.summary }}
+          COVERAGE: ${{ steps.suite.outputs.coverage }}
+          DATABASE_STATUS: ${{ steps.suite.outputs.database_status }}
+          COMMAND_STATUS: ${{ steps.suite.outputs.command_status }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg request_id "${REQUEST_ID}" \
+            --arg target_sha "${TARGET_SHA}" \
+            --arg result "${RESULT}" \
+            --arg reason "${REASON}" \
+            --arg summary "${SUMMARY}" \
+            --arg coverage "${COVERAGE}" \
+            --argjson database_status "${DATABASE_STATUS}" \
+            --argjson command_status "${COMMAND_STATUS}" \
+            '{request_id: $request_id, target_sha: $target_sha, result: $result, reason: $reason, summary: $summary, line_coverage: $coverage, database_status: $database_status, command_status: $command_status}' \
+            > ci/full-diagnostic-result.json
+
+      - name: Commit sanitized diagnostic result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ci/full-diagnostic-result.json
+          if git diff --cached --quiet; then
+            echo "Diagnostic result is unchanged."
+          else
+            git commit -m "Record sanitized full-suite diagnostic"
+            git push
+          fi
