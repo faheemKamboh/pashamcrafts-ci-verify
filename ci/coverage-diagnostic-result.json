@@ -1,9 +1,9 @@
 {
-  "request_id": "issue-75-coverage-1",
-  "target_sha": "874c926b1dc3b9baee1989e664860ab41a287f9c",
-  "summary": "974 examples, 0 failures",
-  "coverage": "97.44",
-  "command_status": 2,
+  "request_id": "issue-75-coverage-2",
+  "target_sha": "82bfdbd43084f46484220745770f3f6060ce74bb",
+  "summary": "995 examples, 1 failure",
+  "coverage": "97.74",
+  "command_status": 1,
   "uncovered": [
     {
       "file": "app/controllers/admin/content_pages_controller.rb",
@@ -20,20 +20,6 @@
       ],
       "executable_lines": 48,
       "missed_count": 9
-    },
-    {
-      "file": "app/controllers/legacy_payment_proofs_controller.rb",
-      "missing_lines": [
-        3,
-        4,
-        5,
-        6,
-        8,
-        9,
-        10
-      ],
-      "executable_lines": 9,
-      "missed_count": 7
     },
     {
       "file": "app/controllers/admin/orders_controller.rb",
@@ -99,40 +85,6 @@
       ],
       "executable_lines": 70,
       "missed_count": 6
-    },
-    {
-      "file": "app/models/payment.rb",
-      "missing_lines": [
-        64,
-        85,
-        93,
-        99,
-        106
-      ],
-      "executable_lines": 66,
-      "missed_count": 5
-    },
-    {
-      "file": "app/models/payment_review.rb",
-      "missing_lines": [
-        29,
-        36,
-        41,
-        42
-      ],
-      "executable_lines": 28,
-      "missed_count": 4
-    },
-    {
-      "file": "app/services/payments/proof_scanner.rb",
-      "missing_lines": [
-        10,
-        11,
-        13,
-        19
-      ],
-      "executable_lines": 11,
-      "missed_count": 4
     },
     {
       "file": "app/controllers/admin/base_controller.rb",
@@ -362,6 +314,15 @@
       "missed_count": 2
     },
     {
+      "file": "app/services/payments/proof_scanner.rb",
+      "missing_lines": [
+        13,
+        19
+      ],
+      "executable_lines": 11,
+      "missed_count": 2
+    },
+    {
       "file": "app/services/payments/submit.rb",
       "missing_lines": [
         39,
@@ -408,6 +369,30 @@
         67
       ],
       "executable_lines": 42,
+      "missed_count": 1
+    },
+    {
+      "file": "app/controllers/admin/inquiries_controller.rb",
+      "missing_lines": [
+        49
+      ],
+      "executable_lines": 56,
+      "missed_count": 1
+    },
+    {
+      "file": "app/controllers/admin/operational_alerts_controller.rb",
+      "missing_lines": [
+        26
+      ],
+      "executable_lines": 21,
+      "missed_count": 1
+    },
+    {
+      "file": "app/controllers/checkouts_controller.rb",
+      "missing_lines": [
+        109
+      ],
+      "executable_lines": 75,
       "missed_count": 1
     }
   ]
