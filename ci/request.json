@@ -1,9 +1,14 @@
 {
-  "request_id": "issue-76-tracking-session-targeted-2",
-  "target_sha": "8e16ab638f9e908bad4e4c1a44fe11cf42fe6c5f",
+  "request_id": "issue-76-canonical-targeted-1",
+  "target_sha": "a7906a46cc95d900fd380f363bfa779fc34ca0cf",
   "checks": ["targeted"],
   "specs": [
-    "spec/requests/order_tracking_spec.rb",
-    "spec/requests/customer_revoked_session_access_spec.rb"
+    "spec/services/customer_accounts/account_access_spec.rb",
+    "spec/requests/customer_account_access_spec.rb",
+    "spec/requests/customer_revoked_session_access_spec.rb",
+    "spec/requests/customer_session_binding_spec.rb",
+    "spec/requests/checkouts_spec.rb",
+    "spec/requests/orders_spec.rb",
+    "spec/requests/order_tracking_spec.rb"
   ]
 }
