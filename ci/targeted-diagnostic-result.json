@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-76-customer-access-targeted-3",
-  "target_sha": "d18eb4ff6e30f7150aefe8606198ed120b2255ad",
-  "detail": "26 examples, 2 failures; ./spec/requests/customer_account_access_spec.rb:63 | ActionView::Template::Error: undefined method 'payment_remaining_amount' for an instance of Order | ./app/views/customer/dashboard/show.html.erb:17:in 'block in _app_views_customer_dashboard_show_html_erb___483966199656703369_28736' || ./spec/requests/customer_account_access_spec.rb:124 | RSpec::Expectations::ExpectationNotMetError: expected the response to have a success status code (2xx) but it was 302 | ./spec/requests/customer_account_access_spec.rb:140:in 'block (3 levels) in <top (required)>'"
+  "request_id": "issue-76-customer-access-targeted-4",
+  "target_sha": "36fb6cb2db418ab50b37e54bd8e570b1e21a2738",
+  "detail": "26 examples, 0 failures; no failure detail"
 }
