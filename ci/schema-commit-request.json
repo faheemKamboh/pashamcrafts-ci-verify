@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-76-schema-commit-1",
-  "target_sha": "adaa6e41fe247a63987f46df4d4b04c6dd7d833c",
-  "branch": "feature/issue-76-customer-access"
+  "request_id": "issue-76-dashboard-schema-2",
+  "target_sha": "8bb4834f8247e437d999bea2d8b01f4000e6c679",
+  "branch": "feature/issue-76-customer-dashboard"
 }
