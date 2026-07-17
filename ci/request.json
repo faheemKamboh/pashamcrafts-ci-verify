@@ -1,11 +1,12 @@
 {
-  "request_id": "issue-76-reconciled-targeted-1",
-  "target_sha": "19e6abf753366b02b0a7a9bd856872faa88bc613",
+  "request_id": "issue-76-final-targeted-1",
+  "target_sha": "409dd900594e2c13cdbba13957817782be1a6673",
   "checks": ["targeted"],
   "specs": [
     "spec/services/customer_accounts/account_access_spec.rb",
     "spec/requests/customer_account_access_spec.rb",
     "spec/requests/customer_revoked_session_access_spec.rb",
+    "spec/requests/customer_session_binding_spec.rb",
     "spec/requests/checkouts_spec.rb",
     "spec/requests/orders_spec.rb",
     "spec/requests/order_tracking_spec.rb"
