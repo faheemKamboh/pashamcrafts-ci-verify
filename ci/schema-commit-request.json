@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-74-schema-commit-2",
-  "target_sha": "31e1222ce0649fc7b138c92f566b847e27ac1045",
-  "branch": "feature/issue-74-checkout-reservations"
+  "request_id": "issue-75-schema-commit-1",
+  "target_sha": "fb8fa2f4d2b2aa95bd3d16aa526eefdd691959c5",
+  "branch": "feature/issue-75-payment-records"
 }
