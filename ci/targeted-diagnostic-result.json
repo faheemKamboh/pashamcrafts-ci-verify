@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-76-customer-access-targeted-7",
-  "target_sha": "407d7b05a08baf1777dd96e99aa54fffbb478316",
-  "detail": "38 examples, 1 failures; ./spec/requests/customer_revoked_session_access_spec.rb:14 | RSpec::Expectations::ExpectationNotMetError: Expected response to be a <3XX: redirect>, but was a <200: OK> | ./spec/requests/customer_revoked_session_access_spec.rb:20:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-76-reconciled-targeted-1",
+  "target_sha": "19e6abf753366b02b0a7a9bd856872faa88bc613",
+  "detail": "63 examples, 0 failures; no failure detail"
 }
