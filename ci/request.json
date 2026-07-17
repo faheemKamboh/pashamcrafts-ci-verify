@@ -1,6 +1,6 @@
 {
-  "request_id": "issue75-final-tracking-1",
+  "request_id": "issue-75-full-4",
   "target_sha": "b859188de9b41fd4ee9f7a05fb85880dc499ad44",
-  "checks": ["targeted"],
-  "specs": ["spec/requests/order_tracking_spec.rb"]
+  "checks": ["full"],
+  "specs": []
 }
