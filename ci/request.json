@@ -1,9 +1,9 @@
 {
-  "request_id": "issue-75-final-payment-targeted-1",
+  "request_id": "issue-75-final-tracking-targeted-1",
   "target_sha": "625c3e2bc4a40f3c59c2f5e401bdda295dbacf85",
   "checks": ["targeted"],
   "specs": [
-    "spec/services/payments/review_spec.rb",
-    "spec/requests/checkout_reservation_payment_review_spec.rb"
+    "spec/requests/order_tracking_spec.rb",
+    "spec/requests/admin/order_notifications_spec.rb"
   ]
 }
