@@ -1,9 +1,6 @@
 {
-  "request_id": "issue-75-admin-privacy-targeted-4",
+  "request_id": "issue-75-final-static-2",
   "target_sha": "c677bdd686e8f1b28f10fbbb50ee902f28d82b8d",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/initializers/filter_parameter_logging_spec.rb",
-    "spec/requests/admin/orders_spec.rb"
-  ]
+  "checks": ["lint", "security"],
+  "specs": []
 }
