@@ -1,6 +1,14 @@
 {
-  "request_id": "issue-76-consolidated-full-1",
-  "target_sha": "06443e3f95c621c127a9f299e6760b22e7ec7d20",
-  "checks": ["tests", "lint", "security"],
-  "specs": []
+  "request_id": "issue-76-pr124-targeted-1",
+  "target_sha": "c13f3a7d894347825eaac218fb08c5e91b86d4c6",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/customer_accounts/account_access_spec.rb",
+    "spec/services/customer_accounts/authenticate_throttle_spec.rb",
+    "spec/requests/customer_account_access_spec.rb",
+    "spec/requests/customer_revoked_session_access_spec.rb",
+    "spec/requests/checkouts_spec.rb",
+    "spec/requests/orders_spec.rb",
+    "spec/requests/order_tracking_spec.rb"
+  ]
 }
