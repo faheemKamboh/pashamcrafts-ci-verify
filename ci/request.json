@@ -1,9 +1,6 @@
 {
-  "request_id": "issue-76-customer-access-targeted-4",
+  "request_id": "issue-76-customer-access-lint-1",
   "target_sha": "36fb6cb2db418ab50b37e54bd8e570b1e21a2738",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/customer_accounts/account_access_spec.rb",
-    "spec/requests/customer_account_access_spec.rb"
-  ]
+  "checks": ["lint"],
+  "specs": []
 }
