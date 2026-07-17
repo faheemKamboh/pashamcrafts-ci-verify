@@ -1,9 +1,10 @@
 {
-  "request_id": "issue-75-final-targeted-1",
-  "target_sha": "4941cfb3c4b44ae88b601d424b1a7f33a08c5f38",
+  "request_id": "issue-75-final-targeted-2",
+  "target_sha": "413fbb1498427115e3cb0f68a244bb6255b3955e",
   "checks": ["targeted"],
   "specs": [
     "spec/initializers/filter_parameter_logging_spec.rb",
-    "spec/requests/checkout_reservation_payment_review_spec.rb"
+    "spec/requests/checkout_reservation_payment_review_spec.rb",
+    "spec/requests/admin/orders_spec.rb"
   ]
 }
