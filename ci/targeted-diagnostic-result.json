@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-75-final-targeted-2",
-  "target_sha": "413fbb1498427115e3cb0f68a244bb6255b3955e",
-  "detail": "23 examples, 1 failures; ./spec/requests/checkout_reservation_payment_review_spec.rb:141 | RSpec::Expectations::ExpectationNotMetError: expected #<Payment id: 6, approved_amount: 0.0, claimed_amount: 0.225e4, created_at: \"2026-07-17 10:09:01.0309...], transaction_reference_fingerprint: [FILTERED], updated_at: \"2026-07-17 10:09:01.030924000 +0000\"> to have attributes {approved_amount: 0.1e4, status: \"partially_approved\"} but had attributes {approved_amount: 0.0, status: \"submitted\"} | ./spec/requests/checkout_reservation_payment_review_spec.rb:152:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-75-payment-review-targeted-5",
+  "target_sha": "c677bdd686e8f1b28f10fbbb50ee902f28d82b8d",
+  "detail": "11 examples, 0 failures; no failure detail"
 }
