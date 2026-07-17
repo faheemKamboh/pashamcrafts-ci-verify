@@ -1,14 +1,10 @@
 {
-  "request_id": "issue-75-coverage-safety-targeted-4",
-  "target_sha": "58e939076ab40f81547e8d4827cc1d1edf984cb3",
+  "request_id": "issue75-models-5",
+  "target_sha": "e22952e2109ef9e7492b5666d72393c1c0b62e18",
   "checks": ["targeted"],
   "specs": [
     "spec/models/payment_spec.rb",
     "spec/models/payment_proof_spec.rb",
-    "spec/models/payment_review_spec.rb",
-    "spec/services/payments/proof_preparer_spec.rb",
-    "spec/services/payments/proof_scanner_spec.rb",
-    "spec/services/payments/submission_limiter_spec.rb",
-    "spec/requests/legacy_payment_proofs_spec.rb"
+    "spec/models/payment_review_spec.rb"
   ]
 }
