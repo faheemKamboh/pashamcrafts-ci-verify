@@ -1,5 +1,5 @@
 {
-  "request_id": "issue75-final-proof-paths-1",
-  "target_sha": "ed2152d7a9a5ae4556e12def8091bce4d054c642",
-  "detail": "17 examples, 1 failures; ./spec/services/payments/proof_preparer_spec.rb:17 | ImageProcessing::Error: ImageProcessing::Vips requires the ruby-vips gem. Please add `gem \"ruby-vips\", \"~> 2.0\"` to your Gemfile. | ./spec/services/payments/proof_preparer_spec.rb:23:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue75-final-proof-paths-2",
+  "target_sha": "89adb37cd9025aa3b4e341e09c163b0d573f0d38",
+  "detail": "17 examples, 0 failures; no failure detail"
 }
