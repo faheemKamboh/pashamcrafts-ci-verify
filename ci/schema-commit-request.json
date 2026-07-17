@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-75-schema-commit-1",
-  "target_sha": "fb8fa2f4d2b2aa95bd3d16aa526eefdd691959c5",
+  "request_id": "issue-75-schema-commit-2",
+  "target_sha": "98a933428a4857b82b5c0a7766a9155179d99f0b",
   "branch": "feature/issue-75-payment-records"
 }
