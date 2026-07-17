@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-76-final-full-1",
-  "target_sha": "409dd900594e2c13cdbba13957817782be1a6673",
-  "checks": ["tests", "lint", "security"],
+  "request_id": "issue-76-pr125-full-1",
+  "target_sha": "c9368fb1c726bc951c31d749c21bfb129afec42b",
+  "checks": ["full"],
   "specs": []
 }
