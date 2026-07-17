@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-76-customer-access-targeted-2",
-  "target_sha": "f059bd36bba239f01653d0e7894baac090d13c37",
+  "request_id": "issue-76-customer-access-targeted-3",
+  "target_sha": "d18eb4ff6e30f7150aefe8606198ed120b2255ad",
   "checks": ["targeted"],
   "specs": [
     "spec/services/customer_accounts/account_access_spec.rb",
