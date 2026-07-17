@@ -1,11 +1,9 @@
 {
-  "request_id": "issue75-proof-services-5",
-  "target_sha": "e22952e2109ef9e7492b5666d72393c1c0b62e18",
+  "request_id": "issue75-final-proof-paths-1",
+  "target_sha": "ed2152d7a9a5ae4556e12def8091bce4d054c642",
   "checks": ["targeted"],
   "specs": [
     "spec/services/payments/proof_preparer_spec.rb",
-    "spec/services/payments/proof_scanner_spec.rb",
-    "spec/services/payments/submission_limiter_spec.rb",
-    "spec/requests/legacy_payment_proofs_spec.rb"
+    "spec/requests/upload_proof_spec.rb"
   ]
 }
