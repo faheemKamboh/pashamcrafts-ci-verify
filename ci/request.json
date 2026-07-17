@@ -1,6 +1,9 @@
 {
-  "request_id": "issue-76-pr125-full-1",
-  "target_sha": "c9368fb1c726bc951c31d749c21bfb129afec42b",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-76-tracking-session-targeted-1",
+  "target_sha": "3abac6c13ee5a63f43fe3cb3beaec9964bbd33c8",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/requests/order_tracking_spec.rb",
+    "spec/requests/customer_revoked_session_access_spec.rb"
+  ]
 }
