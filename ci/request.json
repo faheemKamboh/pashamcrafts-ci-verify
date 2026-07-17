@@ -1,6 +1,6 @@
 {
-  "request_id": "issue75-final-proof-paths-1",
-  "target_sha": "ed2152d7a9a5ae4556e12def8091bce4d054c642",
+  "request_id": "issue75-final-proof-paths-2",
+  "target_sha": "89adb37cd9025aa3b4e341e09c163b0d573f0d38",
   "checks": ["targeted"],
   "specs": [
     "spec/services/payments/proof_preparer_spec.rb",
