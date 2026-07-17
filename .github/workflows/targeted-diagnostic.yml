@@ -86,9 +86,19 @@ jobs:
           bundle exec rails db:create db:migrate > /dev/null 2>&1
           mapfile -t specs < "${RUNNER_TEMP}/specs.txt"
           bundle exec rspec "${specs[@]}" --format json --out "${RUNNER_TEMP}/rspec.json" > "${RUNNER_TEMP}/rspec.log" 2>&1
-          summary="$(jq -r '"\(.summary.example_count) examples, \(.summary.failure_count) failures"' "${RUNNER_TEMP}/rspec.json")"
-          failures="$(jq -r '[.examples[] | select(.status == "failed") | "\(.file_path):\(.line_number) | \(.exception.class): \((.exception.message | split("\n") | map(select(length > 0)) | .[0]) // "no message") | \((.exception.backtrace[0]) // "no backtrace")"] | join(" || ")' "${RUNNER_TEMP}/rspec.json" | cut -c1-1800)"
+          command_status=$?
+          if [ -s "${RUNNER_TEMP}/rspec.json" ]; then
+            summary="$(jq -r '"\(.summary.example_count) examples, \(.summary.failure_count) failures"' "${RUNNER_TEMP}/rspec.json")"
+            failure_count="$(jq -r '.summary.failure_count' "${RUNNER_TEMP}/rspec.json")"
+            failures="$(jq -r '[.examples[] | select(.status == "failed") | "\(.file_path):\(.line_number) | \(.exception.class): \((.exception.message | split("\n") | map(select(length > 0)) | .[0]) // "no message") | \((.exception.backtrace[0]) // "no backtrace")"] | join(" || ")' "${RUNNER_TEMP}/rspec.json" | cut -c1-1800)"
+          else
+            summary="0 examples, load failure"
+            failure_count=1
+            failures="$(grep -E 'Error|Failure|Exception|LoadError|NameError|SyntaxError' "${RUNNER_TEMP}/rspec.log" | head -n 3 | tr '\n' ' ' | cut -c1-1800)"
+          fi
+          if [ "${command_status}" -eq 0 ] && [ "${failure_count}" -eq 0 ]; then result=success; else result=failure; fi
           detail="${summary}; ${failures:-no failure detail}"
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
           echo "TARGETED_DETAIL=${detail}"
           exit 0
@@ -106,25 +116,33 @@ jobs:
             --arg target_sha "${TARGET_SHA}" \
             --arg detail "${DETAIL:-unavailable}" \
             '{request_id: $request_id, target_sha: $target_sha, detail: $detail}' \
-            > ci/targeted-diagnostic-result.json
+            > "${RUNNER_TEMP}/targeted-diagnostic-result.json"
+
           git config user.name "pashamcrafts-ci"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add ci/targeted-diagnostic-result.json
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "Record sanitized targeted diagnostic"
-          git push origin HEAD:main
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp "${RUNNER_TEMP}/targeted-diagnostic-result.json" ci/targeted-diagnostic-result.json
+            git add ci/targeted-diagnostic-result.json
+            git diff --cached --quiet && exit 0
+            git commit -m "Record sanitized targeted diagnostic"
+            git push origin HEAD:main && exit 0
+            sleep $((attempt * 2))
+          done
+          exit 1
 
       - name: Publish sanitized detail
         env:
           GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ steps.tests.outputs.result }}
           DETAIL: ${{ steps.tests.outputs.detail }}
         shell: bash
         run: |
           set -euo pipefail
+          state="${RESULT:-failure}"
           description="$(printf '%s' "${DETAIL:-unavailable}" | cut -c1-130)"
-          payload="$(jq -n --arg state success --arg context "pashamcrafts/targeted-detail" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/targeted-detail" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
           curl --fail-with-body --silent --show-error --request POST \
             --header "Authorization: Bearer ${GH_TOKEN}" \
             --header "Accept: application/vnd.github+json" \
