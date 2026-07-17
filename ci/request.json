@@ -1,9 +1,12 @@
 {
-  "request_id": "issue-75-regressions-targeted-1",
-  "target_sha": "874c926b1dc3b9baee1989e664860ab41a287f9c",
+  "request_id": "issue-75-coverage-safety-targeted-1",
+  "target_sha": "82bfdbd43084f46484220745770f3f6060ce74bb",
   "checks": ["targeted"],
   "specs": [
-    "spec/requests/admin/delivery_operations_spec.rb",
-    "spec/services/notification_service_spec.rb"
+    "spec/models/payment_spec.rb",
+    "spec/models/payment_review_spec.rb",
+    "spec/services/payments/proof_scanner_spec.rb",
+    "spec/services/payments/submission_limiter_spec.rb",
+    "spec/requests/legacy_payment_proofs_spec.rb"
   ]
 }
