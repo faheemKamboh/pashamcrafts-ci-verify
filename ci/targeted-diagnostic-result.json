@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-76-tracking-session-targeted-1",
-  "target_sha": "3abac6c13ee5a63f43fe3cb3beaec9964bbd33c8",
-  "detail": "13 examples, 2 failures; ./spec/requests/order_tracking_spec.rb:108 | RSpec::Expectations::ExpectationNotMetError: Expected response to be a redirect to <http://www.example.com/track> but was a redirect to <http://www.example.com/track/ORD-20260717-000001>. | ./spec/requests/order_tracking_spec.rb:113:in 'block (3 levels) in <top (required)>' || ./spec/requests/order_tracking_spec.rb:116 | NoMethodError: undefined method 'travel' for #<RSpec::ExampleGroups::OrderTracking::GETTrackId:0x00007fb5e07a6410> | ./spec/requests/order_tracking_spec.rb:117:in 'block (3 levels) in <top (required)>'"
+  "request_id": "issue-76-tracking-session-targeted-2",
+  "target_sha": "8e16ab638f9e908bad4e4c1a44fe11cf42fe6c5f",
+  "detail": "13 examples, 0 failures; no failure detail"
 }
