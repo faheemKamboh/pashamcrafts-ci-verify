@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-76-tracking-session-targeted-1",
-  "target_sha": "3abac6c13ee5a63f43fe3cb3beaec9964bbd33c8",
+  "request_id": "issue-76-tracking-session-targeted-2",
+  "target_sha": "8e16ab638f9e908bad4e4c1a44fe11cf42fe6c5f",
   "checks": ["targeted"],
   "specs": [
     "spec/requests/order_tracking_spec.rb",
