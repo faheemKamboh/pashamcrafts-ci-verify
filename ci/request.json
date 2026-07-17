@@ -1,6 +1,9 @@
 {
-  "request_id": "issue-75-log-filter-targeted-1",
-  "target_sha": "640d1f6b57e7bd4df2135dd38626401ebe14fbf4",
+  "request_id": "issue-75-final-targeted-1",
+  "target_sha": "4941cfb3c4b44ae88b601d424b1a7f33a08c5f38",
   "checks": ["targeted"],
-  "specs": ["spec/initializers/filter_parameter_logging_spec.rb"]
+  "specs": [
+    "spec/initializers/filter_parameter_logging_spec.rb",
+    "spec/requests/checkout_reservation_payment_review_spec.rb"
+  ]
 }
