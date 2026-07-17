@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-75-regressions-targeted-1",
-  "target_sha": "874c926b1dc3b9baee1989e664860ab41a287f9c",
-  "detail": "8 examples, 0 failures; no failure detail"
+  "request_id": "issue-75-coverage-safety-targeted-1",
+  "target_sha": "82bfdbd43084f46484220745770f3f6060ce74bb",
+  "detail": "21 examples, 1 failures; ./spec/services/payments/proof_scanner_spec.rb:31 | NameError: uninitialized constant ErrorReporter | ./spec/services/payments/proof_scanner_spec.rb:34:in 'block (2 levels) in <top (required)>'"
 }
