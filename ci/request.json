@@ -1,14 +1,6 @@
 {
-  "request_id": "issue-75-request-boundary-2",
+  "request_id": "issue-75-static-1",
   "target_sha": "fb8fa2f4d2b2aa95bd3d16aa526eefdd691959c5",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/models/payment_proof_spec.rb",
-    "spec/requests/upload_proof_spec.rb",
-    "spec/requests/checkout_reservation_payment_review_spec.rb",
-    "spec/requests/admin/payments_spec.rb",
-    "spec/requests/orders_spec.rb",
-    "spec/requests/order_tracking_spec.rb",
-    "spec/requests/order_messages_spec.rb"
-  ]
+  "checks": ["lint", "security"],
+  "specs": []
 }
