@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-76-customer-access-targeted-5",
-  "target_sha": "1847587caf272a5a08e939d097dd084a9a3d91a1",
-  "detail": "27 examples, 1 failures; ./spec/requests/customer_revoked_session_access_spec.rb:14 | RSpec::Expectations::ExpectationNotMetError: Expected response to be a <3XX: redirect>, but was a <200: OK> | ./spec/requests/customer_revoked_session_access_spec.rb:20:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-76-customer-access-targeted-7",
+  "target_sha": "407d7b05a08baf1777dd96e99aa54fffbb478316",
+  "detail": "38 examples, 1 failures; ./spec/requests/customer_revoked_session_access_spec.rb:14 | RSpec::Expectations::ExpectationNotMetError: Expected response to be a <3XX: redirect>, but was a <200: OK> | ./spec/requests/customer_revoked_session_access_spec.rb:20:in 'block (2 levels) in <top (required)>'"
 }
