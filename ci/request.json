@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-75-full-1",
-  "target_sha": "06b7712fc7b3045917b0179438a18901fd98272a",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-75-log-filter-targeted-1",
+  "target_sha": "640d1f6b57e7bd4df2135dd38626401ebe14fbf4",
+  "checks": ["targeted"],
+  "specs": ["spec/initializers/filter_parameter_logging_spec.rb"]
 }
