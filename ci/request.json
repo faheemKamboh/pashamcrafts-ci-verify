@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-75-coverage-safety-targeted-1",
-  "target_sha": "82bfdbd43084f46484220745770f3f6060ce74bb",
+  "request_id": "issue-75-coverage-safety-targeted-2",
+  "target_sha": "6fc8a2eb3ee2f7032115e6af884d3b4e25a74131",
   "checks": ["targeted"],
   "specs": [
     "spec/models/payment_spec.rb",
