@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-75-payment-review-targeted-5",
-  "target_sha": "c677bdd686e8f1b28f10fbbb50ee902f28d82b8d",
-  "detail": "11 examples, 0 failures; no failure detail"
+  "request_id": "issue-75-regressions-targeted-1",
+  "target_sha": "874c926b1dc3b9baee1989e664860ab41a287f9c",
+  "detail": "8 examples, 0 failures; no failure detail"
 }
