@@ -1,9 +1,9 @@
 {
-  "request_id": "issue-75-coverage-4",
-  "target_sha": "58e939076ab40f81547e8d4827cc1d1edf984cb3",
-  "summary": "1001 examples, 0 failures",
+  "request_id": "issue-75-coverage-5",
+  "target_sha": "e22952e2109ef9e7492b5666d72393c1c0b62e18",
+  "summary": "1002 examples, 1 failure",
   "coverage": "97.89",
-  "command_status": 2,
+  "command_status": 1,
   "uncovered": [
     {
       "file": "app/controllers/admin/content_pages_controller.rb",
