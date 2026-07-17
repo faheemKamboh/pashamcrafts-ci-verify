@@ -1,11 +1,6 @@
 {
-  "request_id": "issue-75-final-targeted-3",
+  "request_id": "issue-75-final-static-1",
   "target_sha": "1d4e326d619a434813ff8b514193a9f612659f44",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/initializers/filter_parameter_logging_spec.rb",
-    "spec/requests/checkout_reservation_payment_review_spec.rb",
-    "spec/requests/admin/orders_spec.rb",
-    "spec/requests/admin/order_notifications_spec.rb"
-  ]
+  "checks": ["lint", "security"],
+  "specs": []
 }
