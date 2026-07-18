@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-78-coverage-branch-specs",
-  "target_sha": "e84bfc193a046cb147e1ff59c6be91bd2f4a48b5",
-  "detail": "22 examples, 0 failures; no failure detail"
+  "request_id": "issue-78-defensive-guards",
+  "target_sha": "c38b630758ba021a50c9835380bd4e50b02df3fb",
+  "detail": "17 examples, 0 failures; no failure detail"
 }
