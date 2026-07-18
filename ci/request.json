@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-77-notifications-targeted-5",
-  "target_sha": "188d3937fa0fbaccc03e30d7a61cc089e9153ced",
+  "request_id": "issue-77-notifications-targeted-6",
+  "target_sha": "445935412597e3194cd13f8a5fb5312629360a44",
   "checks": ["targeted"],
   "specs": [
     "spec/services/notifications/customer_updates_spec.rb",
@@ -8,6 +8,9 @@
     "spec/requests/admin/notifications_spec.rb",
     "spec/requests/admin/order_notifications_spec.rb",
     "spec/services/settings/operational_integration_spec.rb",
-    "spec/services/operational/readiness_spec.rb"
+    "spec/services/operational/readiness_spec.rb",
+    "spec/services/payments/submit_spec.rb",
+    "spec/services/payments/add_proof_spec.rb",
+    "spec/services/payments/review_spec.rb"
   ]
 }
