@@ -1,12 +1,13 @@
 {
-  "request_id": "issue-77-notifications-targeted-2",
-  "target_sha": "f79bdae65c5af731716a5c725095006fe43889e5",
+  "request_id": "issue-77-notifications-targeted-3",
+  "target_sha": "bd7c0cb7e5914ec773162efa20cece4cd7c36270",
   "checks": ["targeted"],
   "specs": [
     "spec/services/notifications/customer_updates_spec.rb",
     "spec/requests/customer_notifications_spec.rb",
     "spec/requests/admin/notifications_spec.rb",
     "spec/requests/admin/order_notifications_spec.rb",
-    "spec/services/settings/operational_integration_spec.rb"
+    "spec/services/settings/operational_integration_spec.rb",
+    "spec/services/operational/readiness_spec.rb"
   ]
 }
