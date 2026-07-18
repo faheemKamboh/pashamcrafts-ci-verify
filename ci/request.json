@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-76-security-edges-targeted-1",
+  "request_id": "issue-76-final-full-4",
   "target_sha": "50f265363a2ce9825cc127256b7fad68451d26c7",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/requests/customer_account_security_edges_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
