@@ -1,27 +1,10 @@
 {
-  "request_id": "issue-78-tests-8",
-  "target_sha": "5ac4201cca9d4ea878c83f1a12f26eec94bdf9b3",
+  "request_id": "issue-78-inventory-transition-1",
+  "target_sha": "59d25e3f0a1d290d4e999dd19decbfcee4d9a6e9",
   "checks": ["targeted"],
   "specs": [
-    "spec/models/order_spec.rb",
-    "spec/models/order_state_transition_spec.rb",
-    "spec/models/checkout_reservation_spec.rb",
-    "spec/presenters/orders/customer_state_presenter_spec.rb",
     "spec/services/orders/transition_spec.rb",
     "spec/services/orders/inventory_transition_spec.rb",
-    "spec/services/checkout/reservation_lifecycle_spec.rb",
-    "spec/services/payments/submit_spec.rb",
-    "spec/services/payments/add_proof_spec.rb",
-    "spec/services/payments/review_spec.rb",
-    "spec/services/notification_service_spec.rb",
-    "spec/services/notifications/customer_updates_spec.rb",
-    "spec/requests/admin/orders_spec.rb",
-    "spec/requests/admin/order_assignment_spec.rb",
-    "spec/requests/admin/order_dashboard_queues_spec.rb",
-    "spec/requests/checkout_reservation_payment_review_spec.rb",
-    "spec/requests/order_tracking_spec.rb",
-    "spec/requests/order_state_privacy_spec.rb",
-    "spec/requests/orders_spec.rb",
-    "spec/requests/customer_account_access_spec.rb"
+    "spec/services/checkout/reservation_lifecycle_spec.rb"
   ]
 }
