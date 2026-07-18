@@ -1,9 +1,10 @@
 {
-  "request_id": "issue-79-initial-custom-snapshots",
-  "target_sha": "4f88b48e3e1734928b1df1544a1d47299fcc32db",
+  "request_id": "issue-79-command-foundation-smoke",
+  "target_sha": "5a73b4f6ed875d7bdd68def9df49c0a339277bcf",
   "checks": ["targeted"],
   "specs": [
     "spec/services/checkout/create_custom_advance_reservation_spec.rb",
-    "spec/requests/orders_spec.rb"
+    "spec/requests/orders_spec.rb",
+    "spec/services/settings/registry_spec.rb"
   ]
 }
