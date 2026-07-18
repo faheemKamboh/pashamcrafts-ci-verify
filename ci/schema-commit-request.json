@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-77-notifications-schema-1",
-  "target_sha": "188d3937fa0fbaccc03e30d7a61cc089e9153ced",
+  "request_id": "issue-77-notifications-schema-final-1",
+  "target_sha": "5ae574cbfb07c54c3daa570b86f31201caf80663",
   "branch": "feature/issue-77-notifications-email"
 }
