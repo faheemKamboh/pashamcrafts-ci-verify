@@ -1,10 +1,6 @@
 {
-  "request_id": "issue-78-inventory-transition-1",
-  "target_sha": "59d25e3f0a1d290d4e999dd19decbfcee4d9a6e9",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/orders/transition_spec.rb",
-    "spec/services/orders/inventory_transition_spec.rb",
-    "spec/services/checkout/reservation_lifecycle_spec.rb"
-  ]
+  "request_id": "issue-78-final-check",
+  "target_sha": "42f7e852c2ca599da9e8eeb53e81b7f0ba348b0f",
+  "checks": ["full"],
+  "specs": []
 }
