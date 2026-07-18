@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-77-notifications-targeted-1",
-  "target_sha": "7ad13969be9f24d968c5eb43936d256aacd30009",
+  "request_id": "issue-77-notifications-targeted-2",
+  "target_sha": "f79bdae65c5af731716a5c725095006fe43889e5",
   "checks": ["targeted"],
   "specs": [
     "spec/services/notifications/customer_updates_spec.rb",
