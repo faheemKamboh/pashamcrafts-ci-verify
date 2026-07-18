@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-78-final-schema",
-  "target_sha": "42f7e852c2ca599da9e8eeb53e81b7f0ba348b0f",
+  "request_id": "issue-78-schema-stability-pass-2",
+  "target_sha": "faf48edd3cb79edfd36ad20ee3228b261367b1a5",
   "branch": "feature/issue-78-order-state-management"
 }
