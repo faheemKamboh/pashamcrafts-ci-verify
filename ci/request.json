@@ -1,10 +1,6 @@
 {
-  "request_id": "issue-77-tests-2",
+  "request_id": "issue-77-final-full-2",
   "target_sha": "40926d7490a762e499ecdc86fb1bd0c496ee9b38",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/models/customer_notification_spec.rb",
-    "spec/services/notifications/customer_updates_spec.rb",
-    "spec/requests/admin/notifications_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
