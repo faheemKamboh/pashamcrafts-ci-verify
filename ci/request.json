@@ -1,13 +1,16 @@
 {
-  "request_id": "issue-78-order-states-targeted-2",
-  "target_sha": "43d7abc005f94e7676a620c3f6baf677c178ff84",
+  "request_id": "issue-78-order-states-targeted-3",
+  "target_sha": "babd83db1ba0456a4b3baca58639f08e31143129",
   "checks": ["targeted"],
   "specs": [
+    "spec/models/order_spec.rb",
+    "spec/presenters/orders/customer_state_presenter_spec.rb",
     "spec/services/orders/transition_spec.rb",
     "spec/services/payments/submit_spec.rb",
     "spec/services/payments/add_proof_spec.rb",
     "spec/services/payments/review_spec.rb",
     "spec/requests/admin/orders_spec.rb",
-    "spec/requests/order_tracking_spec.rb"
+    "spec/requests/order_tracking_spec.rb",
+    "spec/requests/orders_spec.rb"
   ]
 }
