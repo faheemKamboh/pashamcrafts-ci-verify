@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-77-coverage-fixes-targeted-1",
-  "target_sha": "dd761604e672355bc15a6c7ae7ce270355e666a2",
+  "request_id": "issue-77-tests-2",
+  "target_sha": "40926d7490a762e499ecdc86fb1bd0c496ee9b38",
   "checks": ["targeted"],
   "specs": [
     "spec/models/customer_notification_spec.rb",
