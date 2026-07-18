@@ -1,6 +1,13 @@
 {
-  "request_id": "issue-77-final-full-3",
-  "target_sha": "1384c50b5f4eb1d1b5d630e55b98d507598c6d43",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-78-order-states-targeted-1",
+  "target_sha": "7c9cdf98be9e7270d162c5e39d85502a652abac4",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/orders/transition_spec.rb",
+    "spec/services/payments/submit_spec.rb",
+    "spec/services/payments/add_proof_spec.rb",
+    "spec/services/payments/review_spec.rb",
+    "spec/requests/admin/orders_spec.rb",
+    "spec/requests/order_tracking_spec.rb"
+  ]
 }
