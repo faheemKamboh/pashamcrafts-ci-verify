@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-78-order-states-targeted-4",
-  "target_sha": "5643111744ec9ab6e7e71b12c6f42da4d5885b5c",
+  "request_id": "issue-78-order-states-targeted-5",
+  "target_sha": "6f0bac44a095864bbdf119671cb6a1bbb4714607",
   "checks": ["targeted"],
   "specs": [
     "spec/models/order_spec.rb",
@@ -10,8 +10,13 @@
     "spec/services/payments/submit_spec.rb",
     "spec/services/payments/add_proof_spec.rb",
     "spec/services/payments/review_spec.rb",
+    "spec/services/notifications/customer_updates_spec.rb",
     "spec/requests/admin/orders_spec.rb",
+    "spec/requests/admin/order_assignment_spec.rb",
+    "spec/requests/admin/order_dashboard_queues_spec.rb",
     "spec/requests/order_tracking_spec.rb",
-    "spec/requests/orders_spec.rb"
+    "spec/requests/order_state_privacy_spec.rb",
+    "spec/requests/orders_spec.rb",
+    "spec/requests/customer_account_access_spec.rb"
   ]
 }
