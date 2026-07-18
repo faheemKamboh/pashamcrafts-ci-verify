@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-78-failing-request-specs",
-  "target_sha": "90a2a41d6dba3751b26c7d3878531d1848216236",
+  "request_id": "issue-78-reconciled-request-specs",
+  "target_sha": "606ad40fd1c4c1323d4419462f6f65d6bde5c540",
   "checks": ["targeted"],
   "specs": [
     "spec/requests/admin/dashboard_spec.rb",
