@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-78-order-states-targeted-4",
-  "target_sha": "5643111744ec9ab6e7e71b12c6f42da4d5885b5c",
-  "detail": "98 examples, 1 failures; ./spec/requests/orders_spec.rb:214 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\" dir=\\\"ltr\\\">\\n  <head>\\n    <title>PashamCrafts</title>\\n    <met...text-stone-500\\\">© 2026 PashamCrafts. All rights reserved.</div>\\n</footer>\\n\\n  </body>\\n</html>\\n\" not to include \"Internal notes\" | ./spec/requests/orders_spec.rb:219:in 'block (3 levels) in <top (required)>'"
+  "request_id": "issue-78-order-states-targeted-5",
+  "target_sha": "6f0bac44a095864bbdf119671cb6a1bbb4714607",
+  "detail": "136 examples, 0 failures; no failure detail"
 }
