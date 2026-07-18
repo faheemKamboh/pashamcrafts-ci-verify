@@ -127,12 +127,20 @@ jobs:
             printf '[]\n' > "${RUNNER_TEMP}/gaps.json"
           fi
 
+          grep -oE 'rspec \./spec/[^ :]+:[0-9]+' "${RUNNER_TEMP}/rspec.log" \
+            | sed 's#^rspec \./##' \
+            | sort -u \
+            | head -n 50 \
+            | jq -R -s 'split("\n") | map(select(length > 0))' \
+            > "${RUNNER_TEMP}/failures.json" || printf '[]\n' > "${RUNNER_TEMP}/failures.json"
+
           jq -n \
             --arg request_id "${REQUEST_ID}" \
             --arg target_sha "${TARGET_SHA}" \
             --arg summary "${SUMMARY}" \
             --arg coverage "${COVERAGE}" \
             --argjson command_status "${COMMAND_STATUS:-1}" \
+            --slurpfile failures "${RUNNER_TEMP}/failures.json" \
             --slurpfile gaps "${RUNNER_TEMP}/gaps.json" \
             '{
               request_id: $request_id,
@@ -140,6 +148,7 @@ jobs:
               summary: $summary,
               coverage: $coverage,
               command_status: $command_status,
+              failure_locations: $failures[0],
               uncovered: $gaps[0]
             }' > ci/coverage-diagnostic-result.json
           cp ci/coverage-diagnostic-result.json "${RUNNER_TEMP}/coverage-diagnostic-result.json"
