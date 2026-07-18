@@ -1,8 +1,10 @@
 {
-  "request_id": "issue-78-request-specs-final",
-  "target_sha": "a4d90b3b592da76a5fc2950043858e892f774718",
+  "request_id": "issue-78-coverage-branch-specs",
+  "target_sha": "e84bfc193a046cb147e1ff59c6be91bd2f4a48b5",
   "checks": ["targeted"],
   "specs": [
+    "spec/presenters/orders/customer_state_presenter_spec.rb",
+    "spec/requests/admin/order_state_coverage_spec.rb",
     "spec/requests/admin/dashboard_spec.rb",
     "spec/requests/admin/order_notifications_spec.rb",
     "spec/requests/admin/order_transitions_spec.rb"
