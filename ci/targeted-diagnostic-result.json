@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-77-coverage-fixes-targeted-1",
-  "target_sha": "dd761604e672355bc15a6c7ae7ce270355e666a2",
-  "detail": "21 examples, 1 failures; ./spec/services/notifications/customer_updates_spec.rb:77 | RSpec::Expectations::ExpectationNotMetError: expected \"Customer Test Customer sent a note on PashamCrafts order #ORD-20260718-000001. Phone: 03000000008.\" to include \"There is an update for order\" | ./spec/services/notifications/customer_updates_spec.rb:95:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-77-tests-2",
+  "target_sha": "40926d7490a762e499ecdc86fb1bd0c496ee9b38",
+  "detail": "21 examples, 0 failures; no failure detail"
 }
