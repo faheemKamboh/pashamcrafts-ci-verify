@@ -1,9 +1,10 @@
 {
-  "request_id": "issue-78-order-states-targeted-5",
-  "target_sha": "6f0bac44a095864bbdf119671cb6a1bbb4714607",
+  "request_id": "issue-78-tests-6",
+  "target_sha": "74853df3a1db7363760ea2d8bdbba19b609c68fa",
   "checks": ["targeted"],
   "specs": [
     "spec/models/order_spec.rb",
+    "spec/models/order_state_transition_spec.rb",
     "spec/models/checkout_reservation_spec.rb",
     "spec/presenters/orders/customer_state_presenter_spec.rb",
     "spec/services/orders/transition_spec.rb",
