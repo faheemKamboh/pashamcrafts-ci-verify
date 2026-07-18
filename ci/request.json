@@ -1,6 +1,10 @@
 {
-  "request_id": "issue-77-final-full-1",
-  "target_sha": "21edd70c2d2d3525e9c18f3e55ec896f2d2b9d83",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-77-coverage-fixes-targeted-1",
+  "target_sha": "dd761604e672355bc15a6c7ae7ce270355e666a2",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/models/customer_notification_spec.rb",
+    "spec/services/notifications/customer_updates_spec.rb",
+    "spec/requests/admin/notifications_spec.rb"
+  ]
 }
