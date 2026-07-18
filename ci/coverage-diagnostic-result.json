@@ -1,8 +1,8 @@
 {
-  "request_id": "issue-76-pr124-coverage-final-1",
-  "target_sha": "c63e54e4aa4e22c23a4f03ef4a08eb9dfb370c0d",
-  "summary": "1025 examples, 0 failures",
-  "coverage": "97.58",
+  "request_id": "issue-77-coverage-final-1",
+  "target_sha": "21edd70c2d2d3525e9c18f3e55ec896f2d2b9d83",
+  "summary": "1060 examples, 0 failures",
+  "coverage": "97.87",
   "command_status": 2,
   "uncovered": [
     {
@@ -20,35 +20,6 @@
       ],
       "executable_lines": 48,
       "missed_count": 9
-    },
-    {
-      "file": "app/controllers/admin/customer_recoveries_controller.rb",
-      "missing_lines": [
-        6,
-        7,
-        10,
-        11,
-        12,
-        13,
-        15,
-        29
-      ],
-      "executable_lines": 21,
-      "missed_count": 8
-    },
-    {
-      "file": "app/controllers/customer/profiles_controller.rb",
-      "missing_lines": [
-        16,
-        17,
-        18,
-        28,
-        31,
-        32,
-        33
-      ],
-      "executable_lines": 20,
-      "missed_count": 7
     },
     {
       "file": "app/controllers/admin/orders_controller.rb",
@@ -90,38 +61,17 @@
       "missed_count": 6
     },
     {
-      "file": "app/services/customer_accounts/reset_password.rb",
+      "file": "app/services/notification_service.rb",
       "missing_lines": [
-        16,
-        17,
-        20,
-        21,
-        64
+        128,
+        130,
+        138,
+        140,
+        142,
+        144
       ],
-      "executable_lines": 35,
-      "missed_count": 5
-    },
-    {
-      "file": "app/models/concerns/customer_account_access.rb",
-      "missing_lines": [
-        75,
-        111,
-        124,
-        150
-      ],
-      "executable_lines": 76,
-      "missed_count": 4
-    },
-    {
-      "file": "app/services/customer_accounts/authenticate.rb",
-      "missing_lines": [
-        27,
-        28,
-        35,
-        36
-      ],
-      "executable_lines": 37,
-      "missed_count": 4
+      "executable_lines": 49,
+      "missed_count": 6
     },
     {
       "file": "app/controllers/admin/base_controller.rb",
@@ -233,6 +183,15 @@
       "missed_count": 2
     },
     {
+      "file": "app/controllers/admin/notifications_controller.rb",
+      "missing_lines": [
+        22,
+        23
+      ],
+      "executable_lines": 33,
+      "missed_count": 2
+    },
+    {
       "file": "app/controllers/admin/product_variants_controller.rb",
       "missing_lines": [
         23,
@@ -275,6 +234,15 @@
         62
       ],
       "executable_lines": 27,
+      "missed_count": 2
+    },
+    {
+      "file": "app/models/customer_notification.rb",
+      "missing_lines": [
+        64,
+        93
+      ],
+      "executable_lines": 54,
       "missed_count": 2
     },
     {
@@ -405,6 +373,22 @@
         67
       ],
       "executable_lines": 42,
+      "missed_count": 1
+    },
+    {
+      "file": "app/controllers/admin/inquiries_controller.rb",
+      "missing_lines": [
+        49
+      ],
+      "executable_lines": 56,
+      "missed_count": 1
+    },
+    {
+      "file": "app/controllers/admin/operational_alerts_controller.rb",
+      "missing_lines": [
+        26
+      ],
+      "executable_lines": 21,
       "missed_count": 1
     }
   ]
