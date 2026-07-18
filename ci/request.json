@@ -1,9 +1,6 @@
 {
-  "request_id": "issue-78-defensive-guards",
+  "request_id": "issue-78-final-all-gates",
   "target_sha": "c38b630758ba021a50c9835380bd4e50b02df3fb",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/orders/transition_defensive_guards_spec.rb",
-    "spec/services/orders/transition_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
