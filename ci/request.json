@@ -1,6 +1,9 @@
 {
-  "request_id": "issue-78-final-all-gates",
-  "target_sha": "c38b630758ba021a50c9835380bd4e50b02df3fb",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-79-initial-custom-snapshots",
+  "target_sha": "4f88b48e3e1734928b1df1544a1d47299fcc32db",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/checkout/create_custom_advance_reservation_spec.rb",
+    "spec/requests/orders_spec.rb"
+  ]
 }
