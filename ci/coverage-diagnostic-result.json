@@ -1,8 +1,8 @@
 {
-  "request_id": "issue-78-final-coverage-pass",
-  "target_sha": "a4d90b3b592da76a5fc2950043858e892f774718",
-  "summary": "1081 examples, 0 failures",
-  "coverage": "97.81",
+  "request_id": "issue-78-coverage-threshold-final",
+  "target_sha": "e84bfc193a046cb147e1ff59c6be91bd2f4a48b5",
+  "summary": "1083 examples, 0 failures",
+  "coverage": "98.0",
   "command_status": 2,
   "failure_locations": [],
   "uncovered": [
@@ -20,22 +20,6 @@
         84
       ],
       "executable_lines": 48,
-      "missed_count": 9
-    },
-    {
-      "file": "app/controllers/admin/orders_controller.rb",
-      "missing_lines": [
-        15,
-        74,
-        75,
-        76,
-        109,
-        113,
-        115,
-        117,
-        119
-      ],
-      "executable_lines": 68,
       "missed_count": 9
     },
     {
@@ -79,18 +63,6 @@
       ],
       "executable_lines": 128,
       "missed_count": 6
-    },
-    {
-      "file": "app/presenters/orders/customer_state_presenter.rb",
-      "missing_lines": [
-        90,
-        92,
-        94,
-        98,
-        100
-      ],
-      "executable_lines": 41,
-      "missed_count": 5
     },
     {
       "file": "app/controllers/admin/base_controller.rb",
@@ -400,6 +372,22 @@
         26
       ],
       "executable_lines": 21,
+      "missed_count": 1
+    },
+    {
+      "file": "app/controllers/admin/orders_controller.rb",
+      "missing_lines": [
+        15
+      ],
+      "executable_lines": 68,
+      "missed_count": 1
+    },
+    {
+      "file": "app/controllers/checkouts_controller.rb",
+      "missing_lines": [
+        109
+      ],
+      "executable_lines": 75,
       "missed_count": 1
     }
   ]
