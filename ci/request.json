@@ -1,6 +1,9 @@
 {
-  "request_id": "issue-78-definitive-final-head",
-  "target_sha": "dc9ae45e87cebbc8f8ca5bef96a8e4bff8600e35",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-78-defensive-guards",
+  "target_sha": "c38b630758ba021a50c9835380bd4e50b02df3fb",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/orders/transition_defensive_guards_spec.rb",
+    "spec/services/orders/transition_spec.rb"
+  ]
 }
