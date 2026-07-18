@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-78-tests-7",
-  "target_sha": "5e1feeb6656432eeec945538bf4f5d0b0557cf06",
-  "detail": "151 examples, 0 failures; no failure detail"
+  "request_id": "issue-78-tests-8",
+  "target_sha": "5ac4201cca9d4ea878c83f1a12f26eec94bdf9b3",
+  "detail": "162 examples, 1 failures; ./spec/services/orders/inventory_transition_spec.rb:106 | ActiveRecord::StatementInvalid: PG::UndefinedColumn: ERROR:  column inventory_movements.action does not exist | ./spec/services/orders/inventory_transition_spec.rb:117:in 'block (3 levels) in <top (required)>'"
 }
