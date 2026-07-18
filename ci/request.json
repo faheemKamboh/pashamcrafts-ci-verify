@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-78-order-states-targeted-1",
-  "target_sha": "7c9cdf98be9e7270d162c5e39d85502a652abac4",
+  "request_id": "issue-78-order-states-targeted-2",
+  "target_sha": "43d7abc005f94e7676a620c3f6baf677c178ff84",
   "checks": ["targeted"],
   "specs": [
     "spec/services/orders/transition_spec.rb",
