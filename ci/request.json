@@ -1,10 +1,10 @@
 {
-  "request_id": "issue-79-command-foundation-smoke",
-  "target_sha": "5a73b4f6ed875d7bdd68def9df49c0a339277bcf",
+  "request_id": "issue-79-lifecycle-foundation",
+  "target_sha": "e7ee855d0f80f94b6b70411e1ca3fe25522c8756",
   "checks": ["targeted"],
   "specs": [
+    "spec/services/custom_orders/lifecycle_spec.rb",
     "spec/services/checkout/create_custom_advance_reservation_spec.rb",
-    "spec/requests/orders_spec.rb",
-    "spec/services/settings/registry_spec.rb"
+    "spec/requests/orders_spec.rb"
   ]
 }
