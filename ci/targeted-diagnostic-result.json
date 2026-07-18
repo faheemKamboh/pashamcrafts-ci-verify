@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-78-reconciled-request-specs",
-  "target_sha": "606ad40fd1c4c1323d4419462f6f65d6bde5c540",
-  "detail": "16 examples, 1 failures; ./spec/requests/admin/dashboard_spec.rb:67 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n  <head>\\n    <title>Dashboard — PashamCrafts Admin</title>\\n  ...</div>\\n\\n            </main>\\n          </div>\\n        </div>\\n      </div>\\n  </body>\\n</html>\\n\" to include \"Assign an operational owner\" | ./spec/requests/admin/dashboard_spec.rb:75:in 'block (4 levels) in <top (required)>'"
+  "request_id": "issue-78-request-specs-final",
+  "target_sha": "a4d90b3b592da76a5fc2950043858e892f774718",
+  "detail": "16 examples, 0 failures; no failure detail"
 }
