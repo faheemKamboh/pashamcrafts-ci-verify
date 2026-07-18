@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-76-pr124-schema-final-1",
-  "target_sha": "c6dab5185dfac4525906cc2fdda4819c8fe383ec",
-  "branch": "feature/issue-76-customer-access"
+  "request_id": "issue-77-notifications-schema-1",
+  "target_sha": "188d3937fa0fbaccc03e30d7a61cc089e9153ced",
+  "branch": "feature/issue-77-notifications-email"
 }
