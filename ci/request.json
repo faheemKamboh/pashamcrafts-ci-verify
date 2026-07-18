@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-78-tests-7",
-  "target_sha": "5e1feeb6656432eeec945538bf4f5d0b0557cf06",
+  "request_id": "issue-78-tests-8",
+  "target_sha": "5ac4201cca9d4ea878c83f1a12f26eec94bdf9b3",
   "checks": ["targeted"],
   "specs": [
     "spec/models/order_spec.rb",
@@ -8,6 +8,8 @@
     "spec/models/checkout_reservation_spec.rb",
     "spec/presenters/orders/customer_state_presenter_spec.rb",
     "spec/services/orders/transition_spec.rb",
+    "spec/services/orders/inventory_transition_spec.rb",
+    "spec/services/checkout/reservation_lifecycle_spec.rb",
     "spec/services/payments/submit_spec.rb",
     "spec/services/payments/add_proof_spec.rb",
     "spec/services/payments/review_spec.rb",
