@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-79-workflow-surfaces-privacy-fixes",
-  "target_sha": "c4ebfd60a0abde4e8df2e5841b9385d8124928de",
+  "request_id": "issue-79-signed-media-fix",
+  "target_sha": "27a2464ab8ea74234208558c1d5d0161f5a356c9",
   "checks": ["targeted"],
   "specs": [
     "spec/services/custom_orders/production_flow_spec.rb",
