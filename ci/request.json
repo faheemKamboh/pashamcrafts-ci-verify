@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-79-admin-auth-content-coverage",
-  "target_sha": "5785846ed922fe002de5856702ee79ff1c999e6b",
+  "request_id": "issue-79-admin-auth-content-coverage-fixed",
+  "target_sha": "fb98c3143a77b2dd99e208e163ad2da7a0e40c01",
   "checks": ["targeted"],
   "specs": [
     "spec/requests/admin/content_pages_spec.rb",
