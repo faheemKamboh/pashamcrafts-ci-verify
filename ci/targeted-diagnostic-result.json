@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-lifecycle-foundation-time-helper-fix",
-  "target_sha": "3cc25090a37c68a52f75693e6f3b6202c449a130",
-  "detail": "26 examples, 0 failures; no failure detail"
+  "request_id": "issue-79-production-flow-foundation",
+  "target_sha": "82dc23a89c73584f9540e3f0ac317543c53d48bc",
+  "detail": "27 examples, 1 failures; ./spec/services/custom_orders/production_flow_spec.rb:192 | RSpec::Expectations::ExpectationNotMetError: expected #<OperationalAlert id: 1, acknowledged_at: nil, acknowledged_by_id: nil, correlation_id: \"5c38b248-2c... order ORD-20260721-000001 needs a progress ...\", updated_at: \"2026-07-22 09:25:53.000000000 +0000\"> to have attributes {event_key: \"custom_order.progress_update_overdue\", source_id: 3, source_type: \"Order\"} but had attributes {event_key: \"custom_order.progress_update_overdue\", source_id: \"3\", source_type: \"Order\"} | ./spec/services/custom_orders/production_flow_spec.rb:204:in 'block (3 levels) in <top (required)>'"
 }
