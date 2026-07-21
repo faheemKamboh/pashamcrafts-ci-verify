@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-79-service-edge-coverage",
-  "target_sha": "854cf64e054be078009baae7538d6d7ded3c4fed",
+  "request_id": "issue-79-service-edge-coverage-fixed",
+  "target_sha": "d48fbcbe91a9a6d551526f8d6cf36eb4354d854c",
   "checks": ["targeted"],
   "specs": [
     "spec/services/custom_orders/service_edge_guards_spec.rb",
