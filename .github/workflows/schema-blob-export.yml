@@ -164,14 +164,16 @@ jobs:
 
           mark existing-schema-read
           existing_response="$(mktemp)"
+          existing_content_file="${RUNNER_TEMP}/existing-schema.base64"
           curl --fail-with-body --silent --show-error "${auth[@]}" \
             "${api}/contents/db/schema.rb?ref=${TARGET_SHA}" > "${existing_response}"
           existing_blob="$(jq -er '.sha' "${existing_response}")"
-          existing_content="$(jq -er '.content' "${existing_response}" | tr -d '\n')"
+          jq -er '.content' "${existing_response}" | tr -d '\n' > "${existing_content_file}"
 
           mark schema-payload-build
-          generated_content="$(base64 -w0 db/schema.rb)"
-          if [ "${generated_content}" = "${existing_content}" ]; then
+          generated_content_file="${RUNNER_TEMP}/generated-schema.base64"
+          base64 -w0 db/schema.rb > "${generated_content_file}"
+          if cmp -s "${generated_content_file}" "${existing_content_file}"; then
             echo "commit_sha=${TARGET_SHA}" >> "${GITHUB_OUTPUT}"
             echo "ok=true" >> "${GITHUB_OUTPUT}"
             mark ok-no-change
@@ -185,10 +187,10 @@ jobs:
           mark contents-update
           jq -n \
             --arg message "Commit generated schema (${REQUEST_ID})" \
-            --arg content "${generated_content}" \
+            --rawfile content "${generated_content_file}" \
             --arg sha "${existing_blob}" \
             --arg branch "${TARGET_BRANCH}" \
-            '{message: $message, content: $content, sha: $sha, branch: $branch}' \
+            '{message: $message, content: ($content | rtrimstr("\n")), sha: $sha, branch: $branch}' \
             > "${RUNNER_TEMP}/schema-update.json"
           update_response="$(mktemp)"
           update_status="$(curl --silent --show-error --output "${update_response}" --write-out '%{http_code}' \
