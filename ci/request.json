@@ -1,9 +1,10 @@
 {
-  "request_id": "issue-80-http-boundaries-769dedf",
-  "target_sha": "769dedfcddd4416d91fd699a61829c4b3dece7b4",
+  "request_id": "issue-80-shipping-foundation-f58fc52",
+  "target_sha": "f58fc523cb8923c65139677842c4d3cf9719ab30",
   "checks": ["targeted"],
   "specs": [
     "spec/services/shipping/shipping_flow_spec.rb",
+    "spec/models/shipping_evidence_models_spec.rb",
     "spec/requests/shipping_evidence_spec.rb",
     "spec/requests/shipping_workflows_spec.rb"
   ]
