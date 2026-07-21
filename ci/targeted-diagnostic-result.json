@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-controller-coverage-branches",
-  "target_sha": "9221e20770a8ca78009e03662cc70db26d0a2e5d",
-  "detail": "59 examples, 2 failures; ./spec/requests/admin/content_pages_spec.rb:88 | RSpec::Expectations::ExpectationNotMetError: expected \"The draft matches the current published version\" to include \"No content changes\" | ./spec/requests/admin/content_pages_spec.rb:100:in 'block (2 levels) in <top (required)>' || ./spec/requests/orders_branch_coverage_spec.rb:35 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\" dir=\\\"ltr\\\">\\n  <head>\\n    <title>PashamCrafts</title>\\n    <met...text-stone-500\\\">© 2026 PashamCrafts. All rights reserved.</div>\\n</footer>\\n\\n  </body>\\n</html>\\n\" to include \"Name can't be blank\" | ./spec/requests/orders_branch_coverage_spec.rb:49:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-79-controller-coverage-branches-fixed",
+  "target_sha": "29a9b708d8472db2ab28f4220d0cf9e3c978a988",
+  "detail": "59 examples, 1 failures; ./spec/requests/orders_branch_coverage_spec.rb:35 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\" dir=\\\"ltr\\\">\\n  <head>\\n    <title>PashamCrafts</title>\\n    <met...text-stone-500\\\">© 2026 PashamCrafts. All rights reserved.</div>\\n</footer>\\n\\n  </body>\\n</html>\\n\" to include \"Name can't be blank\" | ./spec/requests/orders_branch_coverage_spec.rb:49:in 'block (2 levels) in <top (required)>'"
 }
