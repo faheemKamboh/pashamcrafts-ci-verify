@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-79-profile-coverage-f437500",
+  "request_id": "issue-79-final-full-f437500",
   "target_sha": "f4375004d1ec1011c031776b653d27b161ae9938",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/models/custom_order_profile_coverage_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
