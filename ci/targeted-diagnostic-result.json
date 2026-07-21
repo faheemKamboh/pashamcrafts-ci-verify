@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-shipping-flow-ac2eba8",
-  "target_sha": "ac2eba86b0649bee9c0cb2b86198c789f0fd442e",
-  "detail": "6 examples, 1 failures; ./spec/services/shipping/shipping_flow_spec.rb:119 | Shipping::DispatchOrder::Error: Tracking number is required before courier dispatch | ./app/services/shipping/dispatch_order.rb:57:in 'Shipping::DispatchOrder#call'"
+  "request_id": "issue-80-shipping-evidence-4836954",
+  "target_sha": "483695483816f2d690775dc1f9afc04470883919",
+  "detail": "10 examples, 4 failures; ./spec/requests/shipping_evidence_spec.rb:20 | ActiveSupport::MessageVerifier::InvalidSignature: mismatched digest | ./app/controllers/shipping_evidence_controller.rb:17:in 'ShippingEvidenceController#set_attachment' || ./spec/requests/shipping_evidence_spec.rb:32 | ActiveSupport::MessageVerifier::InvalidSignature: mismatched digest | ./app/controllers/shipping_evidence_controller.rb:17:in 'ShippingEvidenceController#set_attachment' || ./spec/requests/shipping_evidence_spec.rb:41 | ActiveSupport::MessageVerifier::InvalidSignature: mismatched digest | ./app/controllers/shipping_evidence_controller.rb:17:in 'ShippingEvidenceController#set_attachment' || ./spec/requests/shipping_evidence_spec.rb:51 | ActiveSupport::MessageVerifier::InvalidSignature: mismatched digest | ./app/controllers/shipping_evidence_controller.rb:17:in 'ShippingEvidenceController#set_attachment'"
 }
