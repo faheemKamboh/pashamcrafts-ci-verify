@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-shipping-foundation-f58fc52",
-  "target_sha": "f58fc523cb8923c65139677842c4d3cf9719ab30",
-  "detail": "19 examples, 0 failures; no failure detail"
+  "request_id": "issue-80-transition-regression-3908f35",
+  "target_sha": "3908f35dbd82acea3e6f8480aee342b7172e4ad3",
+  "detail": "36 examples, 0 failures; no failure detail"
 }
