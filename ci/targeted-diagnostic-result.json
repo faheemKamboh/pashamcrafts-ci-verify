@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-focused-green-candidate",
-  "target_sha": "c49edc5c9bbdef83a01dcb6ec876df7bb3baaa62",
-  "detail": "60 examples, 1 failures; ./spec/requests/custom_order_media_spec.rb:85 | RSpec::Expectations::ExpectationNotMetError: expected `\"<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n<head>\\n  <meta charset=\\\"utf-8\\\" />\\n  <meta name=\\\"viewport\\\"...ntroller.rb:25:in &#39;ApplicationController#with_audit_context&#39;</script>\\n\\n</body>\\n</html>\\n\".blank?` to be truthy, got false | ./spec/requests/custom_order_media_spec.rb:93:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-79-complete-focused-matrix",
+  "target_sha": "4ccaf173f8aee822ea87ed826a3ba0f14a0d9936",
+  "detail": "63 examples, 0 failures; no failure detail"
 }
