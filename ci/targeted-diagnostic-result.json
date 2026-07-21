@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-controller-coverage-branches-fixed",
-  "target_sha": "29a9b708d8472db2ab28f4220d0cf9e3c978a988",
-  "detail": "59 examples, 1 failures; ./spec/requests/orders_branch_coverage_spec.rb:35 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\" dir=\\\"ltr\\\">\\n  <head>\\n    <title>PashamCrafts</title>\\n    <met...text-stone-500\\\">© 2026 PashamCrafts. All rights reserved.</div>\\n</footer>\\n\\n  </body>\\n</html>\\n\" to include \"Name can't be blank\" | ./spec/requests/orders_branch_coverage_spec.rb:49:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-79-controller-coverage-branches-stable",
+  "target_sha": "8418271cf3d4426dc7e80e720dd4b06c4d5e7f6a",
+  "detail": "59 examples, 0 failures; no failure detail"
 }
