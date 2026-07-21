@@ -1,8 +1,9 @@
 {
-  "request_id": "issue-79-model-guard-coverage",
-  "target_sha": "87e086ffc0a3b53e3aca7973339065244dddc0dd",
+  "request_id": "issue-79-service-edge-coverage",
+  "target_sha": "854cf64e054be078009baae7538d6d7ded3c4fed",
   "checks": ["targeted"],
   "specs": [
+    "spec/services/custom_orders/service_edge_guards_spec.rb",
     "spec/models/custom_order_model_guards_spec.rb",
     "spec/requests/custom_order_admin_workflow_actions_spec.rb",
     "spec/requests/custom_order_workflows_spec.rb",
