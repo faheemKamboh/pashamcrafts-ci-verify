@@ -1,10 +1,12 @@
 {
-  "request_id": "issue-79-focused-green-candidate",
-  "target_sha": "c49edc5c9bbdef83a01dcb6ec876df7bb3baaa62",
+  "request_id": "issue-79-complete-focused-matrix",
+  "target_sha": "4ccaf173f8aee822ea87ed826a3ba0f14a0d9936",
   "checks": ["targeted"],
   "specs": [
     "spec/services/custom_orders/production_flow_spec.rb",
     "spec/services/custom_orders/lifecycle_spec.rb",
+    "spec/services/custom_orders/rejection_spec.rb",
+    "spec/jobs/custom_orders/approval_jobs_spec.rb",
     "spec/requests/custom_order_workflows_spec.rb",
     "spec/requests/custom_order_media_spec.rb",
     "spec/requests/orders_spec.rb",
