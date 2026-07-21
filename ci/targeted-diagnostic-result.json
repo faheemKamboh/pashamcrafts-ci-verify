@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-current-focused-matrix",
-  "target_sha": "f1fb342fead836eb68b4ef3e55edfecc606cf59d",
-  "detail": "64 examples, 0 failures; no failure detail"
+  "request_id": "issue-79-final-focused-candidate",
+  "target_sha": "76bd1b083da27bd6223276da97c7c47ee911858e",
+  "detail": "77 examples, 1 failures; ./spec/jobs/custom_orders/publish_progress_update_job_spec.rb:15 | ActiveRecord::RecordInvalid: Validation failed: Event is not included in the list | ./app/services/notification_service.rb:62:in 'block in NotificationService#record!'"
 }
