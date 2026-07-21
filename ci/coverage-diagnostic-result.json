@@ -1,8 +1,8 @@
 {
-  "request_id": "issue-79-post-admin-workflow-coverage",
-  "target_sha": "400952e1f59414c9497a690bcdb9e89b337dd572",
-  "summary": "1114 examples, 0 failures",
-  "coverage": "97.58",
+  "request_id": "issue-79-post-model-guard-coverage",
+  "target_sha": "87e086ffc0a3b53e3aca7973339065244dddc0dd",
+  "summary": "1118 examples, 0 failures",
+  "coverage": "97.66",
   "command_status": 2,
   "failure_locations": [],
   "uncovered": [
@@ -21,21 +21,6 @@
       ],
       "executable_lines": 48,
       "missed_count": 9
-    },
-    {
-      "file": "app/models/custom_order_approval.rb",
-      "missing_lines": [
-        43,
-        47,
-        74,
-        85,
-        91,
-        99,
-        105,
-        113
-      ],
-      "executable_lines": 76,
-      "missed_count": 8
     },
     {
       "file": "app/controllers/admin/two_factor_challenges_controller.rb",
@@ -103,18 +88,6 @@
       "missed_count": 6
     },
     {
-      "file": "app/models/custom_order_quote.rb",
-      "missing_lines": [
-        97,
-        116,
-        121,
-        123,
-        130
-      ],
-      "executable_lines": 90,
-      "missed_count": 5
-    },
-    {
       "file": "app/services/orders/transition.rb",
       "missing_lines": [
         63,
@@ -135,6 +108,17 @@
         122
       ],
       "executable_lines": 67,
+      "missed_count": 4
+    },
+    {
+      "file": "app/models/custom_order_quote.rb",
+      "missing_lines": [
+        97,
+        121,
+        123,
+        130
+      ],
+      "executable_lines": 90,
       "missed_count": 4
     },
     {
@@ -186,6 +170,16 @@
         180
       ],
       "executable_lines": 116,
+      "missed_count": 3
+    },
+    {
+      "file": "app/models/custom_order_approval.rb",
+      "missing_lines": [
+        74,
+        99,
+        105
+      ],
+      "executable_lines": 76,
       "missed_count": 3
     },
     {
