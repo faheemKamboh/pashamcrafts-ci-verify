@@ -1,8 +1,9 @@
 {
-  "request_id": "issue-79-admin-workflow-coverage",
-  "target_sha": "400952e1f59414c9497a690bcdb9e89b337dd572",
+  "request_id": "issue-79-model-guard-coverage",
+  "target_sha": "87e086ffc0a3b53e3aca7973339065244dddc0dd",
   "checks": ["targeted"],
   "specs": [
+    "spec/models/custom_order_model_guards_spec.rb",
     "spec/requests/custom_order_admin_workflow_actions_spec.rb",
     "spec/requests/custom_order_workflows_spec.rb",
     "spec/services/custom_orders/production_flow_spec.rb",
