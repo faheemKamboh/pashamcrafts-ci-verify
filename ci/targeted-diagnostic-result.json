@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-focused-final-whitelists",
-  "target_sha": "f05cff81ea719ed973920d93631e5cdffe4ccbce",
-  "detail": "77 examples, 0 failures; no failure detail"
+  "request_id": "issue-79-admin-workflow-coverage",
+  "target_sha": "400952e1f59414c9497a690bcdb9e89b337dd572",
+  "detail": "30 examples, 0 failures; no failure detail"
 }
