@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-http-boundaries-769dedf",
-  "target_sha": "769dedfcddd4416d91fd699a61829c4b3dece7b4",
-  "detail": "14 examples, 2 failures; ./spec/requests/shipping_evidence_spec.rb:41 | RSpec::Expectations::ExpectationNotMetError: expected `\"<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n<head>\\n  <meta charset=\\\"utf-8\\\" />\\n  <meta name=\\\"viewport\\\"...ntroller.rb:25:in &#39;ApplicationController#with_audit_context&#39;</script>\\n\\n</body>\\n</html>\\n\".blank?` to be truthy, got false | ./spec/requests/shipping_evidence_spec.rb:48:in 'block (2 levels) in <top (required)>' || ./spec/requests/shipping_workflows_spec.rb:67 | NoMethodError: undefined method 'iso8601' for an instance of String | ./app/services/shipping/record_packing_proof.rb:49:in 'block in Shipping::RecordPackingProof#call'"
+  "request_id": "issue-80-shipping-foundation-f58fc52",
+  "target_sha": "f58fc523cb8923c65139677842c4d3cf9719ab30",
+  "detail": "19 examples, 0 failures; no failure detail"
 }
