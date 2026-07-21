@@ -1,44 +1,11 @@
 {
-  "request_id": "issue-79-final-coverage-diagnostic",
-  "target_sha": "fea3828d2b1bad3dce739175f752f241fccd5ffb",
-  "summary": "1112 examples, 0 failures",
-  "coverage": "97.26",
+  "request_id": "issue-79-post-admin-workflow-coverage",
+  "target_sha": "400952e1f59414c9497a690bcdb9e89b337dd572",
+  "summary": "1114 examples, 0 failures",
+  "coverage": "97.58",
   "command_status": 2,
   "failure_locations": [],
   "uncovered": [
-    {
-      "file": "app/controllers/admin/custom_order_workflows_controller.rb",
-      "missing_lines": [
-        15,
-        16,
-        28,
-        46,
-        47,
-        54,
-        58,
-        59,
-        70,
-        74,
-        75,
-        82,
-        93,
-        104,
-        108,
-        115,
-        119,
-        120,
-        124,
-        128,
-        130,
-        132,
-        136,
-        138,
-        140,
-        144
-      ],
-      "executable_lines": 54,
-      "missed_count": 26
-    },
     {
       "file": "app/controllers/admin/content_pages_controller.rb",
       "missing_lines": [
@@ -446,6 +413,15 @@
         95
       ],
       "executable_lines": 51,
+      "missed_count": 2
+    },
+    {
+      "file": "app/services/inventory/ledger.rb",
+      "missing_lines": [
+        134,
+        202
+      ],
+      "executable_lines": 121,
       "missed_count": 2
     }
   ]
