@@ -1,10 +1,11 @@
 {
-  "request_id": "issue-79-admin-auth-content-coverage-fixed",
-  "target_sha": "fb98c3143a77b2dd99e208e163ad2da7a0e40c01",
+  "request_id": "issue-79-controller-coverage-branches",
+  "target_sha": "9221e20770a8ca78009e03662cc70db26d0a2e5d",
   "checks": ["targeted"],
   "specs": [
     "spec/requests/admin/content_pages_spec.rb",
     "spec/requests/admin/two_factor_authentication_spec.rb",
+    "spec/requests/orders_branch_coverage_spec.rb",
     "spec/services/custom_orders/service_edge_guards_spec.rb",
     "spec/models/custom_order_model_guards_spec.rb",
     "spec/requests/custom_order_admin_workflow_actions_spec.rb",
