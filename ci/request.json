@@ -1,9 +1,10 @@
 {
-  "request_id": "issue-79-content-page-coverage",
-  "target_sha": "176ac3f50daad61d08e6bd1286d0130996202627",
+  "request_id": "issue-79-admin-auth-content-coverage",
+  "target_sha": "5785846ed922fe002de5856702ee79ff1c999e6b",
   "checks": ["targeted"],
   "specs": [
     "spec/requests/admin/content_pages_spec.rb",
+    "spec/requests/admin/two_factor_authentication_spec.rb",
     "spec/services/custom_orders/service_edge_guards_spec.rb",
     "spec/models/custom_order_model_guards_spec.rb",
     "spec/requests/custom_order_admin_workflow_actions_spec.rb",
