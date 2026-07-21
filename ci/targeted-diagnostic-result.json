@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-admin-auth-content-coverage",
-  "target_sha": "5785846ed922fe002de5856702ee79ff1c999e6b",
-  "detail": "56 examples, 1 failures; ./spec/requests/admin/content_pages_spec.rb:88 | RSpec::Expectations::ExpectationNotMetError: Expected response to be a <3XX: redirect>, but was a <422: Unprocessable Content> | ./spec/requests/admin/content_pages_spec.rb:99:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-79-admin-auth-content-coverage-fixed",
+  "target_sha": "fb98c3143a77b2dd99e208e163ad2da7a0e40c01",
+  "detail": "57 examples, 1 failures; ./spec/requests/admin/content_pages_spec.rb:88 | RSpec::Expectations::ExpectationNotMetError: expected \"The draft matches the current published version\" to include \"No content changes\" | ./spec/requests/admin/content_pages_spec.rb:100:in 'block (2 levels) in <top (required)>'"
 }
