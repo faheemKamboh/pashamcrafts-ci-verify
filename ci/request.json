@@ -1,18 +1,6 @@
 {
-  "request_id": "issue-79-controller-coverage-branches-stable",
+  "request_id": "issue-79-final-full-8418271",
   "target_sha": "8418271cf3d4426dc7e80e720dd4b06c4d5e7f6a",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/requests/admin/content_pages_spec.rb",
-    "spec/requests/admin/two_factor_authentication_spec.rb",
-    "spec/requests/orders_branch_coverage_spec.rb",
-    "spec/services/custom_orders/service_edge_guards_spec.rb",
-    "spec/models/custom_order_model_guards_spec.rb",
-    "spec/requests/custom_order_admin_workflow_actions_spec.rb",
-    "spec/requests/custom_order_workflows_spec.rb",
-    "spec/services/custom_orders/production_flow_spec.rb",
-    "spec/services/custom_orders/lifecycle_spec.rb",
-    "spec/jobs/custom_orders/publish_progress_update_job_spec.rb",
-    "spec/services/notifications/customer_updates_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
