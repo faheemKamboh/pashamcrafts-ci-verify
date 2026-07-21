@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-focused-after-notification-fix",
-  "target_sha": "d1307d490a33c333cbed58fdd07f0368de3a48be",
-  "detail": "77 examples, 1 failures; ./spec/jobs/custom_orders/publish_progress_update_job_spec.rb:15 | Notifications::PublishCustomerUpdate::Error: Choose an approved notification event | ./app/services/notifications/publish_customer_update.rb:53:in 'Notifications::PublishCustomerUpdate#validate_inputs!'"
+  "request_id": "issue-79-focused-final-whitelists",
+  "target_sha": "f05cff81ea719ed973920d93631e5cdffe4ccbce",
+  "detail": "77 examples, 0 failures; no failure detail"
 }
