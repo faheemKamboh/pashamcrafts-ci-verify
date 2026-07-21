@@ -1,8 +1,8 @@
 {
-  "request_id": "issue-79-post-model-guard-coverage",
-  "target_sha": "87e086ffc0a3b53e3aca7973339065244dddc0dd",
-  "summary": "1118 examples, 0 failures",
-  "coverage": "97.66",
+  "request_id": "issue-79-post-service-edge-coverage",
+  "target_sha": "d48fbcbe91a9a6d551526f8d6cf36eb4354d854c",
+  "summary": "1121 examples, 0 failures",
+  "coverage": "97.75",
   "command_status": 2,
   "failure_locations": [],
   "uncovered": [
@@ -49,45 +49,6 @@
       "missed_count": 6
     },
     {
-      "file": "app/services/custom_orders/add_production_update.rb",
-      "missing_lines": [
-        40,
-        82,
-        118,
-        139,
-        141,
-        143
-      ],
-      "executable_lines": 68,
-      "missed_count": 6
-    },
-    {
-      "file": "app/services/custom_orders/issue_final_quote.rb",
-      "missing_lines": [
-        36,
-        102,
-        115,
-        138,
-        140,
-        142
-      ],
-      "executable_lines": 62,
-      "missed_count": 6
-    },
-    {
-      "file": "app/services/custom_orders/mark_ready_for_dispatch.rb",
-      "missing_lines": [
-        31,
-        95,
-        97,
-        125,
-        127,
-        129
-      ],
-      "executable_lines": 59,
-      "missed_count": 6
-    },
-    {
       "file": "app/services/orders/transition.rb",
       "missing_lines": [
         63,
@@ -119,6 +80,28 @@
         130
       ],
       "executable_lines": 90,
+      "missed_count": 4
+    },
+    {
+      "file": "app/services/custom_orders/issue_final_quote.rb",
+      "missing_lines": [
+        36,
+        102,
+        115,
+        142
+      ],
+      "executable_lines": 62,
+      "missed_count": 4
+    },
+    {
+      "file": "app/services/custom_orders/mark_ready_for_dispatch.rb",
+      "missing_lines": [
+        31,
+        95,
+        97,
+        129
+      ],
+      "executable_lines": 59,
       "missed_count": 4
     },
     {
@@ -240,6 +223,16 @@
         79
       ],
       "executable_lines": 45,
+      "missed_count": 3
+    },
+    {
+      "file": "app/services/custom_orders/add_production_update.rb",
+      "missing_lines": [
+        40,
+        82,
+        143
+      ],
+      "executable_lines": 68,
       "missed_count": 3
     },
     {
