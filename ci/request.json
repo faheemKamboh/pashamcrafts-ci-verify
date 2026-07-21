@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-79-exact-quote-coverage-b4a0a53",
+  "request_id": "issue-79-final-full-b4a0a53",
   "target_sha": "b4a0a538cc7e0eb5d13ab6f02aecdc6f467074be",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/models/custom_order_profile_coverage_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
