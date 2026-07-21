@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-model-guard-coverage",
-  "target_sha": "87e086ffc0a3b53e3aca7973339065244dddc0dd",
-  "detail": "34 examples, 0 failures; no failure detail"
+  "request_id": "issue-79-service-edge-coverage",
+  "target_sha": "854cf64e054be078009baae7538d6d7ded3c4fed",
+  "detail": "37 examples, 1 failures; ./spec/services/custom_orders/service_edge_guards_spec.rb:156 | ActiveRecord::RecordInvalid: Validation failed: Media is required for final preview | ./app/services/custom_orders/add_production_update.rb:54:in 'block in CustomOrders::AddProductionUpdate#call'"
 }
