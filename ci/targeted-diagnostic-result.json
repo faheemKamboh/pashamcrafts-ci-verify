@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-complete-focused-matrix",
-  "target_sha": "4ccaf173f8aee822ea87ed826a3ba0f14a0d9936",
-  "detail": "63 examples, 0 failures; no failure detail"
+  "request_id": "issue-79-current-focused-matrix",
+  "target_sha": "f1fb342fead836eb68b4ef3e55edfecc606cf59d",
+  "detail": "64 examples, 0 failures; no failure detail"
 }
