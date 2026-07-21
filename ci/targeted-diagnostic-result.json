@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-content-page-coverage",
-  "target_sha": "176ac3f50daad61d08e6bd1286d0130996202627",
-  "detail": "47 examples, 1 failures; ./spec/requests/admin/content_pages_spec.rb:88 | RSpec::Expectations::ExpectationNotMetError: Expected response to be a <3XX: redirect>, but was a <422: Unprocessable Content> | ./spec/requests/admin/content_pages_spec.rb:99:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-79-admin-auth-content-coverage",
+  "target_sha": "5785846ed922fe002de5856702ee79ff1c999e6b",
+  "detail": "56 examples, 1 failures; ./spec/requests/admin/content_pages_spec.rb:88 | RSpec::Expectations::ExpectationNotMetError: Expected response to be a <3XX: redirect>, but was a <422: Unprocessable Content> | ./spec/requests/admin/content_pages_spec.rb:99:in 'block (2 levels) in <top (required)>'"
 }
