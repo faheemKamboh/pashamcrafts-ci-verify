@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-admin-workflow-coverage",
-  "target_sha": "400952e1f59414c9497a690bcdb9e89b337dd572",
-  "detail": "30 examples, 0 failures; no failure detail"
+  "request_id": "issue-79-model-guard-coverage",
+  "target_sha": "87e086ffc0a3b53e3aca7973339065244dddc0dd",
+  "detail": "34 examples, 0 failures; no failure detail"
 }
