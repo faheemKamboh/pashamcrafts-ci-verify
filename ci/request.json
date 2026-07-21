@@ -1,9 +1,10 @@
 {
-  "request_id": "issue-80-view-regression-c027571",
-  "target_sha": "c02757176551067baa3e9da16d6250290e2cbb03",
+  "request_id": "issue-80-confirmation-window-405e9b6",
+  "target_sha": "405e9b662f84f821869eaf96fbafce196f78d4fe",
   "checks": ["targeted"],
   "specs": [
     "spec/services/shipping/shipping_flow_spec.rb",
+    "spec/services/shipping/confirm_delivery_spec.rb",
     "spec/models/shipping_evidence_models_spec.rb",
     "spec/requests/shipping_evidence_spec.rb",
     "spec/requests/shipping_workflows_spec.rb",
