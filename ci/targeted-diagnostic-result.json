@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-final-review-coverage-bc2cbec",
-  "target_sha": "bc2cbec50362844b8979f6aa58cf2ca3e81e8129",
-  "detail": "5 examples, 0 failures; no failure detail"
+  "request_id": "issue-79-quote-guard-coverage-50cdb3c",
+  "target_sha": "50cdb3cc3bbdc786fcb8b1c3d06cd71fe0fc0b0e",
+  "detail": "8 examples, 0 failures; no failure detail"
 }
