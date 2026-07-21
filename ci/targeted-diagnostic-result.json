@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-transition-regression-3908f35",
-  "target_sha": "3908f35dbd82acea3e6f8480aee342b7172e4ad3",
-  "detail": "36 examples, 0 failures; no failure detail"
+  "request_id": "issue-80-admin-regression-d4c6876",
+  "target_sha": "d4c68768ee3cff8db32e21aa96c08fdf44313c9c",
+  "detail": "44 examples, 0 failures; no failure detail"
 }
