@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-schema-stability-pass",
-  "target_sha": "b1db073f6be2c3ea23dce196949ce7a1bae3c71d",
+  "request_id": "issue-79-schema-stability-final",
+  "target_sha": "fea3828d2b1bad3dce739175f752f241fccd5ffb",
   "branch": "feature/issue-79-custom-production-flow"
 }
