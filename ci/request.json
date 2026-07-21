@@ -1,8 +1,6 @@
 {
-  "request_id": "issue-79-final-review-coverage-bc2cbec",
+  "request_id": "issue-79-final-full-bc2cbec",
   "target_sha": "bc2cbec50362844b8979f6aa58cf2ca3e81e8129",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/models/custom_order_profile_coverage_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
