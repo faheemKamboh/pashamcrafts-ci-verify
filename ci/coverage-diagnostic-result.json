@@ -1,53 +1,11 @@
 {
-  "request_id": "issue-79-post-service-edge-coverage",
-  "target_sha": "d48fbcbe91a9a6d551526f8d6cf36eb4354d854c",
-  "summary": "1121 examples, 0 failures",
-  "coverage": "97.75",
+  "request_id": "issue-79-post-controller-coverage",
+  "target_sha": "8418271cf3d4426dc7e80e720dd4b06c4d5e7f6a",
+  "summary": "1130 examples, 0 failures",
+  "coverage": "97.96",
   "command_status": 2,
   "failure_locations": [],
   "uncovered": [
-    {
-      "file": "app/controllers/admin/content_pages_controller.rb",
-      "missing_lines": [
-        6,
-        14,
-        25,
-        37,
-        56,
-        58,
-        59,
-        60,
-        84
-      ],
-      "executable_lines": 48,
-      "missed_count": 9
-    },
-    {
-      "file": "app/controllers/admin/two_factor_challenges_controller.rb",
-      "missing_lines": [
-        26,
-        27,
-        30,
-        33,
-        34,
-        35
-      ],
-      "executable_lines": 37,
-      "missed_count": 6
-    },
-    {
-      "file": "app/controllers/orders_controller.rb",
-      "missing_lines": [
-        11,
-        111,
-        113,
-        191,
-        251,
-        252
-      ],
-      "executable_lines": 128,
-      "missed_count": 6
-    },
     {
       "file": "app/services/orders/transition.rb",
       "missing_lines": [
@@ -143,6 +101,16 @@
         60
       ],
       "executable_lines": 35,
+      "missed_count": 3
+    },
+    {
+      "file": "app/controllers/orders_controller.rb",
+      "missing_lines": [
+        11,
+        113,
+        191
+      ],
+      "executable_lines": 128,
       "missed_count": 3
     },
     {
@@ -409,6 +377,24 @@
         202
       ],
       "executable_lines": 121,
+      "missed_count": 2
+    },
+    {
+      "file": "app/services/orders/transition_policy.rb",
+      "missing_lines": [
+        66,
+        72
+      ],
+      "executable_lines": 19,
+      "missed_count": 2
+    },
+    {
+      "file": "app/services/payments/submit.rb",
+      "missing_lines": [
+        39,
+        136
+      ],
+      "executable_lines": 75,
       "missed_count": 2
     }
   ]
