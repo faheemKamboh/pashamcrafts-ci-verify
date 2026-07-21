@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-lifecycle-foundation",
-  "target_sha": "e7ee855d0f80f94b6b70411e1ca3fe25522c8756",
-  "detail": "26 examples, 1 failures; ./spec/services/custom_orders/lifecycle_spec.rb:214 | NoMethodError: undefined method 'travel_to' for #<RSpec::ExampleGroups::CustomOrderLifecycle:0x00007fa695bc6f40> | ./spec/services/custom_orders/lifecycle_spec.rb:224:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-79-lifecycle-foundation-time-helper-fix",
+  "target_sha": "3cc25090a37c68a52f75693e6f3b6202c449a130",
+  "detail": "26 examples, 0 failures; no failure detail"
 }
