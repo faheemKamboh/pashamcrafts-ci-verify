@@ -1,16 +1,6 @@
 {
-  "request_id": "issue-80-final-targeted-c0b79a3",
+  "request_id": "issue-80-final-static-c0b79a3",
   "target_sha": "c0b79a3a99795f6f12d907c746618f9f9fb7fbe2",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/shipping/shipping_flow_spec.rb",
-    "spec/services/shipping/confirm_delivery_spec.rb",
-    "spec/models/shipping_evidence_models_spec.rb",
-    "spec/requests/shipping_evidence_spec.rb",
-    "spec/requests/shipping_workflows_spec.rb",
-    "spec/requests/shipping_views_spec.rb",
-    "spec/services/orders/transition_spec.rb",
-    "spec/services/orders/transition_defensive_guards_spec.rb",
-    "spec/requests/admin/order_transitions_spec.rb"
-  ]
+  "checks": ["lint", "security"],
+  "specs": []
 }
