@@ -1,11 +1,13 @@
 {
-  "request_id": "issue-80-shipping-foundation-f58fc52",
-  "target_sha": "f58fc523cb8923c65139677842c4d3cf9719ab30",
+  "request_id": "issue-80-transition-regression-3908f35",
+  "target_sha": "3908f35dbd82acea3e6f8480aee342b7172e4ad3",
   "checks": ["targeted"],
   "specs": [
     "spec/services/shipping/shipping_flow_spec.rb",
     "spec/models/shipping_evidence_models_spec.rb",
     "spec/requests/shipping_evidence_spec.rb",
-    "spec/requests/shipping_workflows_spec.rb"
+    "spec/requests/shipping_workflows_spec.rb",
+    "spec/services/orders/transition_spec.rb",
+    "spec/services/orders/transition_defensive_guards_spec.rb"
   ]
 }
