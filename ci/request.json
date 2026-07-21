@@ -1,20 +1,6 @@
 {
-  "request_id": "issue-79-focused-final-whitelists",
-  "target_sha": "f05cff81ea719ed973920d93631e5cdffe4ccbce",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/jobs/custom_orders/publish_progress_update_job_spec.rb",
-    "spec/services/notifications/customer_updates_spec.rb",
-    "spec/services/custom_orders/production_flow_spec.rb",
-    "spec/services/custom_orders/lifecycle_spec.rb",
-    "spec/services/custom_orders/rejection_spec.rb",
-    "spec/services/custom_orders/final_review_setting_spec.rb",
-    "spec/jobs/custom_orders/approval_jobs_spec.rb",
-    "spec/requests/custom_order_workflows_spec.rb",
-    "spec/requests/custom_order_media_spec.rb",
-    "spec/requests/orders_spec.rb",
-    "spec/requests/admin/orders_spec.rb",
-    "spec/services/orders/transition_spec.rb",
-    "spec/services/orders/transition_defensive_guards_spec.rb"
-  ]
+  "request_id": "issue-79-final-full-gate",
+  "target_sha": "fea3828d2b1bad3dce739175f752f241fccd5ffb",
+  "checks": ["full"],
+  "specs": []
 }
