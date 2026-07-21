@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-controller-coverage-branches-stable",
-  "target_sha": "8418271cf3d4426dc7e80e720dd4b06c4d5e7f6a",
-  "detail": "59 examples, 0 failures; no failure detail"
+  "request_id": "issue-79-profile-coverage-f437500",
+  "target_sha": "f4375004d1ec1011c031776b653d27b161ae9938",
+  "detail": "2 examples, 0 failures; no failure detail"
 }
