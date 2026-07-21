@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-79-generate-schema",
-  "target_sha": "76bd1b083da27bd6223276da97c7c47ee911858e",
+  "request_id": "issue-79-schema-current-head",
+  "target_sha": "f05cff81ea719ed973920d93631e5cdffe4ccbce",
   "branch": "feature/issue-79-custom-production-flow"
 }
