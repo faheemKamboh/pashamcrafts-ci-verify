@@ -1,6 +1,13 @@
 {
-  "request_id": "issue-79-final-full-gate",
-  "target_sha": "fea3828d2b1bad3dce739175f752f241fccd5ffb",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-79-admin-workflow-coverage",
+  "target_sha": "400952e1f59414c9497a690bcdb9e89b337dd572",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/requests/custom_order_admin_workflow_actions_spec.rb",
+    "spec/requests/custom_order_workflows_spec.rb",
+    "spec/services/custom_orders/production_flow_spec.rb",
+    "spec/services/custom_orders/lifecycle_spec.rb",
+    "spec/jobs/custom_orders/publish_progress_update_job_spec.rb",
+    "spec/services/notifications/customer_updates_spec.rb"
+  ]
 }
