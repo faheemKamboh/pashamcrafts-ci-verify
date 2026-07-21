@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-view-regression-c027571",
-  "target_sha": "c02757176551067baa3e9da16d6250290e2cbb03",
-  "detail": "47 examples, 0 failures; no failure detail"
+  "request_id": "issue-80-confirmation-window-405e9b6",
+  "target_sha": "405e9b662f84f821869eaf96fbafce196f78d4fe",
+  "detail": "50 examples, 0 failures; no failure detail"
 }
