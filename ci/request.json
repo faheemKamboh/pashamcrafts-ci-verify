@@ -1,6 +1,8 @@
 {
-  "request_id": "issue-79-final-full-b4a0a53",
-  "target_sha": "b4a0a538cc7e0eb5d13ab6f02aecdc6f467074be",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-80-shipping-flow-ac2eba8",
+  "target_sha": "ac2eba86b0649bee9c0cb2b86198c789f0fd442e",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/shipping/shipping_flow_spec.rb"
+  ]
 }
