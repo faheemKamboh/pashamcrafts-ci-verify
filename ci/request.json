@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-79-controller-coverage-branches",
-  "target_sha": "9221e20770a8ca78009e03662cc70db26d0a2e5d",
+  "request_id": "issue-79-controller-coverage-branches-fixed",
+  "target_sha": "29a9b708d8472db2ab28f4220d0cf9e3c978a988",
   "checks": ["targeted"],
   "specs": [
     "spec/requests/admin/content_pages_spec.rb",
