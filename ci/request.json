@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-79-current-focused-matrix",
-  "target_sha": "f1fb342fead836eb68b4ef3e55edfecc606cf59d",
+  "request_id": "issue-79-final-focused-candidate",
+  "target_sha": "76bd1b083da27bd6223276da97c7c47ee911858e",
   "checks": ["targeted"],
   "specs": [
     "spec/services/custom_orders/production_flow_spec.rb",
@@ -8,10 +8,12 @@
     "spec/services/custom_orders/rejection_spec.rb",
     "spec/services/custom_orders/final_review_setting_spec.rb",
     "spec/jobs/custom_orders/approval_jobs_spec.rb",
+    "spec/jobs/custom_orders/publish_progress_update_job_spec.rb",
     "spec/requests/custom_order_workflows_spec.rb",
     "spec/requests/custom_order_media_spec.rb",
     "spec/requests/orders_spec.rb",
     "spec/requests/admin/orders_spec.rb",
+    "spec/services/notifications/customer_updates_spec.rb",
     "spec/services/orders/transition_spec.rb",
     "spec/services/orders/transition_defensive_guards_spec.rb"
   ]
