@@ -1,8 +1,9 @@
 {
-  "request_id": "issue-80-shipping-flow-ac2eba8",
-  "target_sha": "ac2eba86b0649bee9c0cb2b86198c789f0fd442e",
+  "request_id": "issue-80-shipping-evidence-4836954",
+  "target_sha": "483695483816f2d690775dc1f9afc04470883919",
   "checks": ["targeted"],
   "specs": [
-    "spec/services/shipping/shipping_flow_spec.rb"
+    "spec/services/shipping/shipping_flow_spec.rb",
+    "spec/requests/shipping_evidence_spec.rb"
   ]
 }
