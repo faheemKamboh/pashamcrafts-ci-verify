@@ -1,6 +1,8 @@
 {
-  "request_id": "issue-79-final-full-bc2cbec",
-  "target_sha": "bc2cbec50362844b8979f6aa58cf2ca3e81e8129",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-79-quote-guard-coverage-50cdb3c",
+  "target_sha": "50cdb3cc3bbdc786fcb8b1c3d06cd71fe0fc0b0e",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/models/custom_order_profile_coverage_spec.rb"
+  ]
 }
