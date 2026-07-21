@@ -1,8 +1,8 @@
 {
-  "request_id": "issue-79-post-controller-coverage",
-  "target_sha": "8418271cf3d4426dc7e80e720dd4b06c4d5e7f6a",
-  "summary": "1130 examples, 0 failures",
-  "coverage": "97.96",
+  "request_id": "issue-79-post-final-review-coverage",
+  "target_sha": "bc2cbec50362844b8979f6aa58cf2ca3e81e8129",
+  "summary": "1135 examples, 0 failures",
+  "coverage": "97.99",
   "command_status": 2,
   "failure_locations": [],
   "uncovered": [
@@ -27,17 +27,6 @@
         122
       ],
       "executable_lines": 67,
-      "missed_count": 4
-    },
-    {
-      "file": "app/models/custom_order_quote.rb",
-      "missing_lines": [
-        97,
-        121,
-        123,
-        130
-      ],
-      "executable_lines": 90,
       "missed_count": 4
     },
     {
@@ -296,6 +285,15 @@
         68
       ],
       "executable_lines": 50,
+      "missed_count": 2
+    },
+    {
+      "file": "app/models/custom_order_quote.rb",
+      "missing_lines": [
+        123,
+        130
+      ],
+      "executable_lines": 90,
       "missed_count": 2
     },
     {
