@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-shipping-evidence-4836954",
-  "target_sha": "483695483816f2d690775dc1f9afc04470883919",
-  "detail": "10 examples, 4 failures; ./spec/requests/shipping_evidence_spec.rb:20 | ActiveSupport::MessageVerifier::InvalidSignature: mismatched digest | ./app/controllers/shipping_evidence_controller.rb:17:in 'ShippingEvidenceController#set_attachment' || ./spec/requests/shipping_evidence_spec.rb:32 | ActiveSupport::MessageVerifier::InvalidSignature: mismatched digest | ./app/controllers/shipping_evidence_controller.rb:17:in 'ShippingEvidenceController#set_attachment' || ./spec/requests/shipping_evidence_spec.rb:41 | ActiveSupport::MessageVerifier::InvalidSignature: mismatched digest | ./app/controllers/shipping_evidence_controller.rb:17:in 'ShippingEvidenceController#set_attachment' || ./spec/requests/shipping_evidence_spec.rb:51 | ActiveSupport::MessageVerifier::InvalidSignature: mismatched digest | ./app/controllers/shipping_evidence_controller.rb:17:in 'ShippingEvidenceController#set_attachment'"
+  "request_id": "issue-80-shipping-evidence-230c7ea",
+  "target_sha": "230c7ea235548225c775cf2880a64915eedc2c7a",
+  "detail": "10 examples, 1 failures; ./spec/requests/shipping_evidence_spec.rb:41 | RSpec::Expectations::ExpectationNotMetError: expected `\"<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n<head>\\n  <meta charset=\\\"utf-8\\\" />\\n  <meta name=\\\"viewport\\\"...ntroller.rb:25:in &#39;ApplicationController#with_audit_context&#39;</script>\\n\\n</body>\\n</html>\\n\".blank?` to be truthy, got false | ./spec/requests/shipping_evidence_spec.rb:48:in 'block (2 levels) in <top (required)>'"
 }
