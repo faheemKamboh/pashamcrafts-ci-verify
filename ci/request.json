@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-79-signed-media-fix",
-  "target_sha": "27a2464ab8ea74234208558c1d5d0161f5a356c9",
+  "request_id": "issue-79-focused-green-candidate",
+  "target_sha": "c49edc5c9bbdef83a01dcb6ec876df7bb3baaa62",
   "checks": ["targeted"],
   "specs": [
     "spec/services/custom_orders/production_flow_spec.rb",
