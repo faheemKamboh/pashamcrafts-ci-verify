@@ -1,6 +1,8 @@
 {
-  "request_id": "issue-79-final-full-f437500",
-  "target_sha": "f4375004d1ec1011c031776b653d27b161ae9938",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-79-costing-coverage-13db7fa",
+  "target_sha": "13db7fa43d6b1ec91834fd8c49255547c656434f",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/models/custom_order_profile_coverage_spec.rb"
+  ]
 }
