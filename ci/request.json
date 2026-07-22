@@ -1,8 +1,9 @@
 {
-  "request_id": "issue-80-model-safeguards-96103c5",
-  "target_sha": "96103c54b2780fdf9ab177ae64808113718fc964",
+  "request_id": "issue-80-job-safeguards-86ea063",
+  "target_sha": "86ea0635935ecb007d54860c4c7b388edea49ffd",
   "checks": ["targeted"],
   "specs": [
+    "spec/jobs/shipping/complete_delivered_order_job_spec.rb",
     "spec/services/shipping/defensive_guards_spec.rb",
     "spec/services/shipping/shipping_flow_spec.rb",
     "spec/services/shipping/confirm_delivery_spec.rb",
