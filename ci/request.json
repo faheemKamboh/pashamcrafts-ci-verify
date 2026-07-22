@@ -1,6 +1,11 @@
 {
-  "request_id": "issue-80-final-full-884dc47",
-  "target_sha": "884dc47c6e50bb51ec32b20c3230b2d54296f02b",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-81-foundation-targeted-41b3a327",
+  "target_sha": "41b3a327008bce0e833707714e7172a451735702",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/after_sales/workflows_spec.rb",
+    "spec/requests/after_sales_workflows_spec.rb",
+    "spec/requests/after_sales_evidence_spec.rb",
+    "spec/services/orders/transition_spec.rb"
+  ]
 }
