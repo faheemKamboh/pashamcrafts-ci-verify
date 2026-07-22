@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-81-final-endpoints-cf8f951e",
-  "target_sha": "cf8f951e81bc2672531ca13befa0da3517dbbf75",
+  "request_id": "issue-81-complete-targeted-6cd438eb",
+  "target_sha": "6cd438eb432f104e09e424303bc3ca38c790873d",
   "checks": ["targeted"],
   "specs": [
     "spec/services/after_sales/defensive_guards_spec.rb",
@@ -11,6 +11,7 @@
     "spec/requests/admin_after_sales_workflows_spec.rb",
     "spec/requests/after_sales_evidence_spec.rb",
     "spec/requests/after_sales_views_spec.rb",
-    "spec/services/orders/transition_spec.rb"
+    "spec/services/orders/transition_spec.rb",
+    "spec/requests/admin/orders_spec.rb"
   ]
 }
