@@ -1,15 +1,6 @@
 {
-  "request_id": "issue-81-focused-targeted-033af907",
+  "request_id": "issue-81-static-033af907",
   "target_sha": "033af907c7a3cff646dd82f1ef233652556f0c08",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/after_sales/workflows_spec.rb",
-    "spec/models/after_sales_models_spec.rb",
-    "spec/requests/after_sales_workflows_spec.rb",
-    "spec/requests/after_sales_evidence_spec.rb",
-    "spec/requests/after_sales_views_spec.rb",
-    "spec/services/orders/transition_spec.rb",
-    "spec/requests/admin/orders_spec.rb",
-    "spec/requests/shipping_views_spec.rb"
-  ]
+  "checks": ["lint", "security"],
+  "specs": []
 }
