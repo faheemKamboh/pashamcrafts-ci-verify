@@ -259,9 +259,25 @@ jobs:
           else
             schema_path="db/schema.rb"
           fi
+
           git diff -- "${schema_path}" > "${RUNNER_TEMP}/schema.diff"
           git diff --quiet -- "${schema_path}"
           status=$?
+
+          if [ "${status}" -ne 0 ] && [ "${PROJECT}" = "taleemi_idara" ]; then
+            git show "HEAD:${schema_path}" > "${RUNNER_TEMP}/committed-schema"
+            ruby ../ci/normalize-rails-schema.rb \
+              "${RUNNER_TEMP}/committed-schema" \
+              "${schema_path}" \
+              "${RUNNER_TEMP}/committed-schema.normalized" \
+              "${RUNNER_TEMP}/generated-schema.normalized"
+
+            if cmp -s "${RUNNER_TEMP}/committed-schema.normalized" "${RUNNER_TEMP}/generated-schema.normalized"; then
+              status=0
+              echo "Schema differs only by equivalent PostgreSQL check-constraint cast serialization."
+            fi
+          fi
+
           if [ "${status}" -ne 0 ]; then
             cp "${schema_path}" "${RUNNER_TEMP}/generated-schema"
           fi
