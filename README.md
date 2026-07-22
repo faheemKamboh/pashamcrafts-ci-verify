@@ -41,24 +41,23 @@ Run **Dispatch approved private-project checks** and provide:
 
 ### Committed requests
 
-Separate request channels prevent one project from overwriting another project’s active request:
+Existing project-specific request channels remain separate:
 
 - `ci/request.json` — legacy PashamCrafts channel
 - `ci/requests/taleemi_idara.json` — isolated Taleemi Idara channel
-- `ci/requests/greensvilla.json` — isolated GreensVilla channel
+
+GreensVilla initially uses explicit `workflow_dispatch`, which avoids creating or updating a public request file merely to validate a private commit.
 
 ## GreensVilla examples
 
 ### Full verification
 
-```json
-{
-  "project": "greensvilla",
-  "request_id": "greensvilla-full-e154a533",
-  "target_sha": "e154a533217faa045dfedc3f09102129c21f83f6",
-  "checks": ["full"],
-  "specs": []
-}
+```text
+project: greensvilla
+request_id: greensvilla-full-e154a533
+target_sha: e154a533217faa045dfedc3f09102129c21f83f6
+checks: full
+specs:
 ```
 
 The GreensVilla `full` preset runs:
@@ -72,8 +71,6 @@ The GreensVilla `full` preset runs:
 - seed replant and repeat seed execution
 
 ### Targeted verification
-
-Use the generic manual workflow with:
 
 ```text
 project: greensvilla
