@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-81-complete-targeted-6cd438eb",
-  "target_sha": "6cd438eb432f104e09e424303bc3ca38c790873d",
-  "detail": "75 examples, 0 failures; no failure detail"
+  "request_id": "issue-81-concurrency-targeted-be9696b6",
+  "target_sha": "be9696b6d3159a3bae76f9212cb5ed76c4975c38",
+  "detail": "71 examples, 4 failures; ./spec/services/after_sales/concurrency_recovery_spec.rb:59 | AfterSales::SubmitClaim::Error: A matching after-sales request is already open | ./app/services/after_sales/submit_claim.rb:36:in 'block in AfterSales::SubmitClaim#call' || ./spec/services/after_sales/concurrency_recovery_spec.rb:94 | AfterSales::RecordRefund::Error: Refund amount exceeds the unallocated approved payment balance | ./app/services/after_sales/record_refund.rb:34:in 'block in AfterSales::RecordRefund#call' || ./spec/services/after_sales/concurrency_recovery_spec.rb:118 | ActiveRecord::RecordInvalid: Validation failed: Request key has already been taken | ./app/services/after_sales/decide_claim.rb:58:in 'block in AfterSales::DecideClaim#call' || ./spec/services/after_sales/concurrency_recovery_spec.rb:152 | ActiveRecord::RecordInvalid: Validation failed: Request key has already been taken | ./app/services/after_sales/transition_refund.rb:56:in 'block in AfterSales::TransitionRefund#call'"
 }
