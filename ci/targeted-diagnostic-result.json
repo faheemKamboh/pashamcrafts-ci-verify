@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-81-defensive-targeted-e421d785",
-  "target_sha": "e421d785e4a357517b1f59740670d37ed07e9e8c",
-  "detail": "58 examples, 0 failures; no failure detail"
+  "request_id": "issue-81-admin-targeted-c95d3b30",
+  "target_sha": "c95d3b30915fd31040e70b1148742b2344804f98",
+  "detail": "63 examples, 1 failures; ./spec/requests/admin_after_sales_workflows_spec.rb:32 | ActiveRecord::NotNullViolation: PG::NotNullViolation: ERROR:  null value in column \"goodwill_exception\" of relation \"order_claim_decisions\" violates not-null constraint | ./app/services/after_sales/decide_claim.rb:58:in 'block in AfterSales::DecideClaim#call'"
 }
