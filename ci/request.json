@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-81-foundation-targeted-0d1f47d",
-  "target_sha": "0d1f47d1f75e7751154554e25e98fa401e21f6fd",
+  "request_id": "issue-81-integrated-targeted-cfca5bd",
+  "target_sha": "cfca5bdcb314a6182554b43ecbfc73e3f2c8fde6",
   "checks": ["targeted"],
   "specs": [
     "spec/services/after_sales/workflows_spec.rb",
