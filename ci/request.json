@@ -1,12 +1,18 @@
 {
-  "request_id": "issue-80-defensive-coverage-d818f81",
-  "target_sha": "d818f819328cc51e66bf1926cd9d4ac052fda4c9",
+  "request_id": "issue-80-final-shipping-targeted-fc1e55c",
+  "target_sha": "fc1e55c735b6cc9bf458b7d594091ff151e58079",
   "checks": ["targeted"],
   "specs": [
     "spec/services/shipping/defensive_guards_spec.rb",
-    "spec/requests/admin/order_notifications_spec.rb",
-    "spec/requests/admin/orders_spec.rb",
+    "spec/services/shipping/shipping_flow_spec.rb",
+    "spec/services/shipping/confirm_delivery_spec.rb",
+    "spec/models/shipping_evidence_models_spec.rb",
     "spec/models/order_state_transition_spec.rb",
-    "spec/services/shipping/shipping_flow_spec.rb"
+    "spec/requests/shipping_workflows_spec.rb",
+    "spec/requests/shipping_evidence_spec.rb",
+    "spec/requests/shipping_views_spec.rb",
+    "spec/requests/admin/order_notifications_spec.rb",
+    "spec/requests/admin/order_transitions_spec.rb",
+    "spec/requests/admin/orders_spec.rb"
   ]
 }
