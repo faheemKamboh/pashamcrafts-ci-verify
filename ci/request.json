@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-80-final-shipping-targeted-fc1e55c",
-  "target_sha": "fc1e55c735b6cc9bf458b7d594091ff151e58079",
+  "request_id": "issue-80-model-safeguards-b439a34",
+  "target_sha": "b439a34aef82ba0093d0573b71271656e4e60442",
   "checks": ["targeted"],
   "specs": [
     "spec/services/shipping/defensive_guards_spec.rb",
