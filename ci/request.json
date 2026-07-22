@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-81-static-033af907",
-  "target_sha": "033af907c7a3cff646dd82f1ef233652556f0c08",
-  "checks": ["lint", "security"],
+  "request_id": "issue-81-final-full-df9fb78",
+  "target_sha": "df9fb78c02d4f3afdb15e86963852836f24891c6",
+  "checks": ["full"],
   "specs": []
 }
