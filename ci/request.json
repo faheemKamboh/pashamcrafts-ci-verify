@@ -1,8 +1,9 @@
 {
-  "request_id": "issue-80-final-coverage-targeted-452a853",
-  "target_sha": "452a853e2d9f87e064db4c179685d663305f8251",
+  "request_id": "issue-80-concurrency-targeted-884dc47",
+  "target_sha": "884dc47c6e50bb51ec32b20c3230b2d54296f02b",
   "checks": ["targeted"],
   "specs": [
+    "spec/services/shipping/concurrency_recovery_spec.rb",
     "spec/models/order_shipping_guards_spec.rb",
     "spec/requests/shipping_evidence_spec.rb",
     "spec/services/shipping/shipping_flow_spec.rb"
