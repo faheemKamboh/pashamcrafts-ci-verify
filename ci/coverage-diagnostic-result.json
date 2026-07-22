@@ -1,8 +1,8 @@
 {
-  "request_id": "issue-81-defensive-coverage-e421d785",
-  "target_sha": "e421d785e4a357517b1f59740670d37ed07e9e8c",
-  "summary": "1241 examples, 0 failures",
-  "coverage": "97.65",
+  "request_id": "issue-81-final-coverage-cf8f951e",
+  "target_sha": "cf8f951e81bc2672531ca13befa0da3517dbbf75",
+  "summary": "1246 examples, 0 failures",
+  "coverage": "97.75",
   "command_status": 2,
   "failure_locations": [],
   "uncovered": [
@@ -31,18 +31,6 @@
       ],
       "executable_lines": 80,
       "missed_count": 6
-    },
-    {
-      "file": "app/controllers/admin/claim_decisions_controller.rb",
-      "missing_lines": [
-        4,
-        5,
-        15,
-        17,
-        23
-      ],
-      "executable_lines": 10,
-      "missed_count": 5
     },
     {
       "file": "app/models/order_cancellation_request.rb",
@@ -131,16 +119,6 @@
         50
       ],
       "executable_lines": 34,
-      "missed_count": 3
-    },
-    {
-      "file": "app/controllers/admin/order_refunds_controller.rb",
-      "missing_lines": [
-        6,
-        9,
-        25
-      ],
-      "executable_lines": 14,
       "missed_count": 3
     },
     {
@@ -406,12 +384,30 @@
       "missed_count": 2
     },
     {
-      "file": "app/models/order_claim.rb",
+      "file": "app/models/product_variant.rb",
       "missing_lines": [
-        40,
-        44
+        45,
+        124
+      ],
+      "executable_lines": 90,
+      "missed_count": 2
+    },
+    {
+      "file": "app/services/after_sales/request_cancellation.rb",
+      "missing_lines": [
+        59,
+        61
       ],
       "executable_lines": 47,
+      "missed_count": 2
+    },
+    {
+      "file": "app/services/after_sales/submit_claim.rb",
+      "missing_lines": [
+        93,
+        95
+      ],
+      "executable_lines": 60,
       "missed_count": 2
     }
   ]
