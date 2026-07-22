@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-80-final-targeted-63595b9",
-  "target_sha": "63595b9c241b3dec491af85e2de43bd4c2f99ec2",
+  "request_id": "issue-80-final-targeted-762f2fc",
+  "target_sha": "762f2fccc6c2f8afd9fcdbbeeb79c40163d20b44",
   "checks": ["targeted"],
   "specs": [
     "spec/jobs/shipping/complete_delivered_order_job_spec.rb",
