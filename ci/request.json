@@ -1,8 +1,9 @@
 {
-  "request_id": "issue-81-complete-targeted-6cd438eb",
-  "target_sha": "6cd438eb432f104e09e424303bc3ca38c790873d",
+  "request_id": "issue-81-concurrency-targeted-be9696b6",
+  "target_sha": "be9696b6d3159a3bae76f9212cb5ed76c4975c38",
   "checks": ["targeted"],
   "specs": [
+    "spec/services/after_sales/concurrency_recovery_spec.rb",
     "spec/services/after_sales/defensive_guards_spec.rb",
     "spec/services/after_sales/workflows_spec.rb",
     "spec/services/after_sales/idempotency_guards_spec.rb",
@@ -11,7 +12,6 @@
     "spec/requests/admin_after_sales_workflows_spec.rb",
     "spec/requests/after_sales_evidence_spec.rb",
     "spec/requests/after_sales_views_spec.rb",
-    "spec/services/orders/transition_spec.rb",
-    "spec/requests/admin/orders_spec.rb"
+    "spec/services/orders/transition_spec.rb"
   ]
 }
