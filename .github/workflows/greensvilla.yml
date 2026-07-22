@@ -1,0 +1,38 @@
+name: Validate GreensVilla request
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Unique request identifier
+        required: false
+        type: string
+      target_sha:
+        description: Exact GreensVilla commit SHA
+        required: true
+        type: string
+      checks:
+        description: Comma-separated checks, or full
+        required: true
+        default: full
+        type: string
+      specs:
+        description: Comma- or newline-separated RSpec paths when targeted is requested
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  verify:
+    name: Run GreensVilla verifier
+    uses: ./.github/workflows/verify.yml
+    with:
+      project: greensvilla
+      request_id: ${{ inputs.request_id }}
+      target_sha: ${{ inputs.target_sha }}
+      checks: ${{ inputs.checks }}
+      specs: ${{ inputs.specs }}
+    secrets: inherit
