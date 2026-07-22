@@ -1,0 +1,243 @@
+name: Sanitized Taleemi Idara diagnostics
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ci/diagnostics/taleemi_idara.json"
+      - ".github/workflows/taleemi-sanitized-diagnostic.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      target_sha: ${{ steps.request.outputs.target_sha }}
+      database_result: ${{ steps.database.outputs.result }}
+      database_detail: ${{ steps.database.outputs.detail }}
+      schema_result: ${{ steps.schema.outputs.result }}
+      schema_detail: ${{ steps.schema.outputs.detail }}
+      tests_result: ${{ steps.tests.outputs.result }}
+      tests_detail: ${{ steps.tests.outputs.detail }}
+      system_tests_result: ${{ steps.system_tests.outputs.result }}
+      system_tests_detail: ${{ steps.system_tests.outputs.detail }}
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:password@localhost/taleemi_idara_test
+
+    steps:
+      - name: Checkout diagnostic request
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate diagnostic request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          request_file="ci/diagnostics/taleemi_idara.json"
+          project="$(jq -er '.project' "${request_file}")"
+          request_id="$(jq -er '.request_id' "${request_file}")"
+          target_sha="$(jq -er '.target_sha' "${request_file}")"
+
+          [ "${project}" = "taleemi_idara" ]
+          [[ "${request_id}" =~ ^[A-Za-z0-9._-]{1,80}$ ]]
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact Taleemi Idara commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: Ustaad-Ji/taleemi_idara
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.TALEEMI_IDARA_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        run: test "$(git -C app rev-parse HEAD)" = "${{ steps.request.outputs.target_sha }}"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libnspr4 \
+            libnss3 \
+            libpq-dev \
+            libvips \
+            node-gyp \
+            postgresql-client
+
+      - name: Set up Ruby and gems
+        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+          working-directory: app
+
+      - name: Summarize database preparation
+        id: database
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bin/rails db:create db:migrate > "${RUNNER_TEMP}/database.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          detail="database preparation ${result}; command=${status}"
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
+          echo "${detail}"
+          exit 0
+
+      - name: Summarize schema consistency
+        id: schema
+        if: steps.database.outputs.result == 'success'
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          committed_hash="$(git show HEAD:db/schema.rb | git hash-object --stdin)"
+          generated_hash="$(git hash-object db/schema.rb)"
+          numstat="$(git diff --numstat -- db/schema.rb | awk '{print $1 "+/" $2 "-"}' | head -n 1)"
+
+          if git diff --quiet -- db/schema.rb; then
+            result=success
+            detail="schema clean; hash=${committed_hash:0:12}"
+          else
+            result=failure
+            detail="schema differs ${numstat:-unknown}; committed=${committed_hash:0:12}; generated=${generated_hash:0:12}"
+          fi
+
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
+          echo "${detail}"
+
+      - name: Summarize Rails tests
+        id: tests
+        if: steps.database.outputs.result == 'success'
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bin/rails test > "${RUNNER_TEMP}/tests.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
+          failures="$(awk '
+            /^[[:space:]]*(Failure|Error):[[:space:]]*$/ {
+              if (getline line) {
+                gsub(/\r/, "", line)
+                print line
+              }
+            }
+          ' "${RUNNER_TEMP}/tests.log" | sort -u | head -n 5 | paste -sd ';' -)"
+          detail="${summary:-summary unavailable}; command=${status}"
+          [ -z "${failures}" ] || detail="${detail}; ${failures}"
+          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-600)"
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
+          echo "${detail}"
+          exit 0
+
+      - name: Summarize Rails system tests
+        id: system_tests
+        if: steps.database.outputs.result == 'success'
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bin/rails test:system > "${RUNNER_TEMP}/system-tests.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/system-tests.log" | tail -n 1 || true)"
+          failures="$(awk '
+            /^[[:space:]]*(Failure|Error):[[:space:]]*$/ {
+              if (getline line) {
+                gsub(/\r/, "", line)
+                print line
+              }
+            }
+          ' "${RUNNER_TEMP}/system-tests.log" | sort -u | head -n 5 | paste -sd ';' -)"
+          detail="${summary:-summary unavailable}; command=${status}"
+          [ -z "${failures}" ] || detail="${detail}; ${failures}"
+          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-600)"
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
+          echo "${detail}"
+          exit 0
+
+  publish:
+    if: always()
+    needs: diagnose
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish sanitized diagnostic statuses
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ needs.diagnose.outputs.target_sha }}
+          DATABASE_RESULT: ${{ needs.diagnose.outputs.database_result }}
+          DATABASE_DETAIL: ${{ needs.diagnose.outputs.database_detail }}
+          SCHEMA_RESULT: ${{ needs.diagnose.outputs.schema_result }}
+          SCHEMA_DETAIL: ${{ needs.diagnose.outputs.schema_detail }}
+          TESTS_RESULT: ${{ needs.diagnose.outputs.tests_result }}
+          TESTS_DETAIL: ${{ needs.diagnose.outputs.tests_detail }}
+          SYSTEM_TESTS_RESULT: ${{ needs.diagnose.outputs.system_tests_result }}
+          SYSTEM_TESTS_DETAIL: ${{ needs.diagnose.outputs.system_tests_detail }}
+        run: |
+          set -euo pipefail
+
+          publish() {
+            local context="$1" result="$2" detail="$3" state payload
+            case "${result}" in
+              success) state=success ;;
+              failure) state=failure ;;
+              *) state=error ;;
+            esac
+            detail="$(printf '%s' "${detail:-diagnostic unavailable}" | cut -c1-130)"
+            payload="$(jq -n \
+              --arg state "${state}" \
+              --arg context "${context}" \
+              --arg description "${detail}" \
+              --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            curl --fail-with-body --silent --show-error --request POST \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+              --data "${payload}" > /dev/null
+          }
+
+          echo "DATABASE_DETAIL=${DATABASE_DETAIL:-unavailable}"
+          echo "SCHEMA_DETAIL=${SCHEMA_DETAIL:-unavailable}"
+          echo "TESTS_DETAIL=${TESTS_DETAIL:-unavailable}"
+          echo "SYSTEM_TESTS_DETAIL=${SYSTEM_TESTS_DETAIL:-unavailable}"
+
+          publish "taleemi-idara/database-detail" "${DATABASE_RESULT:-error}" "${DATABASE_DETAIL:-unavailable}"
+          publish "taleemi-idara/schema-detail" "${SCHEMA_RESULT:-error}" "${SCHEMA_DETAIL:-unavailable}"
+          publish "taleemi-idara/tests-detail" "${TESTS_RESULT:-error}" "${TESTS_DETAIL:-unavailable}"
+          publish "taleemi-idara/system-tests-detail" "${SYSTEM_TESTS_RESULT:-error}" "${SYSTEM_TESTS_DETAIL:-unavailable}"
