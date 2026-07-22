@@ -1,0 +1,257 @@
+name: Validate Taleemi Idara request
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Unique request identifier
+        required: false
+        type: string
+      target_sha:
+        description: Exact Taleemi Idara commit SHA
+        required: true
+        type: string
+      checks:
+        description: Comma-separated checks, or full
+        required: true
+        default: full
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - "ci/requests/taleemi_idara.json"
+      - ".github/workflows/taleemi-idara.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve Taleemi Idara request
+    runs-on: ubuntu-latest
+    outputs:
+      request_id: ${{ steps.request.outputs.request_id }}
+      target_sha: ${{ steps.request.outputs.target_sha }}
+      checks_json: ${{ steps.request.outputs.checks_json }}
+      run_db: ${{ steps.request.outputs.run_db }}
+      run_schema: ${{ steps.request.outputs.run_schema }}
+      run_tests: ${{ steps.request.outputs.run_tests }}
+      run_system_tests: ${{ steps.request.outputs.run_system_tests }}
+      run_static: ${{ steps.request.outputs.run_static }}
+      run_lint: ${{ steps.request.outputs.run_lint }}
+      run_security: ${{ steps.request.outputs.run_security }}
+    steps:
+      - name: Checkout validator configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate explicit request
+        id: request
+        shell: bash
+        env:
+          DISPATCH_REQUEST_ID: ${{ inputs.request_id }}
+          DISPATCH_TARGET_SHA: ${{ inputs.target_sha }}
+          DISPATCH_CHECKS: ${{ inputs.checks }}
+        run: |
+          set -euo pipefail
+
+          checks_file="${RUNNER_TEMP}/checks.txt"
+          : > "${checks_file}"
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            request_id="${DISPATCH_REQUEST_ID:-manual-${GITHUB_RUN_ID}}"
+            target_sha="${DISPATCH_TARGET_SHA}"
+            printf '%s\n' "${DISPATCH_CHECKS}" | tr ',' '\n' > "${checks_file}"
+          else
+            request_file="ci/requests/taleemi_idara.json"
+            project="$(jq -er '.project' "${request_file}")"
+            [ "${project}" = "taleemi_idara" ] || {
+              echo "The Taleemi Idara request channel cannot validate another project."
+              exit 1
+            }
+            request_id="$(jq -er '.request_id' "${request_file}")"
+            target_sha="$(jq -er '.target_sha' "${request_file}")"
+            jq -r '.checks[]?' "${request_file}" > "${checks_file}"
+          fi
+
+          [[ "${request_id}" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || {
+            echo "Invalid request identifier."
+            exit 1
+          }
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid target SHA."
+            exit 1
+          }
+
+          normalized_checks="${RUNNER_TEMP}/normalized-checks.txt"
+          : > "${normalized_checks}"
+          while IFS= read -r check; do
+            check="$(printf '%s' "${check}" | xargs)"
+            [ -z "${check}" ] && continue
+            case "${check}" in
+              full|schema|tests|system-tests|lint|security) ;;
+              *) echo "Unsupported Taleemi Idara check: ${check}"; exit 1 ;;
+            esac
+            printf '%s\n' "${check}" >> "${normalized_checks}"
+          done < "${checks_file}"
+          sort -u -o "${normalized_checks}" "${normalized_checks}"
+
+          [ -s "${normalized_checks}" ] || {
+            echo "At least one check is required."
+            exit 1
+          }
+
+          if grep -qx full "${normalized_checks}"; then
+            [ "$(wc -l < "${normalized_checks}")" -eq 1 ] || {
+              echo "The full preset cannot be combined with individual checks."
+              exit 1
+            }
+            printf '%s\n' schema tests system-tests lint security > "${normalized_checks}"
+          fi
+
+          checks_json="$(jq -R -s -c 'split("\n") | map(select(length > 0))' "${normalized_checks}")"
+          requested() { grep -qx "$1" "${normalized_checks}"; }
+          bool() { if "$@"; then echo true; else echo false; fi; }
+
+          run_schema="$(bool requested schema)"
+          run_tests="$(bool requested tests)"
+          run_system_tests="$(bool requested system-tests)"
+          run_lint="$(bool requested lint)"
+          run_security="$(bool requested security)"
+
+          if [ "${run_schema}" = true ] || [ "${run_tests}" = true ] || [ "${run_system_tests}" = true ]; then
+            run_db=true
+          else
+            run_db=false
+          fi
+          if [ "${run_lint}" = true ] || [ "${run_security}" = true ]; then
+            run_static=true
+          else
+            run_static=false
+          fi
+
+          {
+            echo "request_id=${request_id}"
+            echo "target_sha=${target_sha}"
+            echo "checks_json=${checks_json}"
+            echo "run_db=${run_db}"
+            echo "run_schema=${run_schema}"
+            echo "run_tests=${run_tests}"
+            echo "run_system_tests=${run_system_tests}"
+            echo "run_static=${run_static}"
+            echo "run_lint=${run_lint}"
+            echo "run_security=${run_security}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Approved Taleemi Idara request ${request_id} for ${target_sha:0:12}."
+
+  db_checks:
+    name: Database-backed checks
+    needs: resolve
+    if: needs.resolve.outputs.run_db == 'true'
+    uses: ./.github/workflows/shared-db-checks.yml
+    with:
+      project: taleemi_idara
+      request_id: ${{ needs.resolve.outputs.request_id }}
+      target_sha: ${{ needs.resolve.outputs.target_sha }}
+      run_schema: ${{ needs.resolve.outputs.run_schema == 'true' }}
+      run_tests: ${{ needs.resolve.outputs.run_tests == 'true' }}
+      run_system_tests: ${{ needs.resolve.outputs.run_system_tests == 'true' }}
+      run_targeted: false
+      run_restore: false
+      specs_json: "[]"
+    secrets: inherit
+
+  static_checks:
+    name: Static checks
+    needs: resolve
+    if: needs.resolve.outputs.run_static == 'true'
+    uses: ./.github/workflows/shared-static-checks.yml
+    with:
+      project: taleemi_idara
+      request_id: ${{ needs.resolve.outputs.request_id }}
+      target_sha: ${{ needs.resolve.outputs.target_sha }}
+      run_lint: ${{ needs.resolve.outputs.run_lint == 'true' }}
+      run_security: ${{ needs.resolve.outputs.run_security == 'true' }}
+    secrets: inherit
+
+  report:
+    name: Publish Taleemi Idara results
+    if: always()
+    needs: [resolve, db_checks, static_checks]
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - name: Publish statuses and enforce result
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUEST_ID: ${{ needs.resolve.outputs.request_id }}
+          TARGET_SHA: ${{ needs.resolve.outputs.target_sha }}
+          CHECKS_JSON: ${{ needs.resolve.outputs.checks_json }}
+          RESOLVE_JOB: ${{ needs.resolve.result }}
+          DB_JOB: ${{ needs.db_checks.result }}
+          STATIC_JOB: ${{ needs.static_checks.result }}
+          SCHEMA_RESULT: ${{ needs.db_checks.outputs.schema_result }}
+          TESTS_RESULT: ${{ needs.db_checks.outputs.tests_result }}
+          SYSTEM_TESTS_RESULT: ${{ needs.db_checks.outputs.system_tests_result }}
+          LINT_RESULT: ${{ needs.static_checks.outputs.lint_result }}
+          SECURITY_RESULT: ${{ needs.static_checks.outputs.security_result }}
+        run: |
+          set -euo pipefail
+          overall=success
+
+          publish() {
+            local check="$1" result="$2" state description payload
+            case "${result}" in
+              success) state=success ;;
+              failure) state=failure; overall=failure ;;
+              *) state=error; overall=failure ;;
+            esac
+            description="Taleemi Idara ${check} ${result} for ${TARGET_SHA:0:12}"
+            payload="$(jq -n \
+              --arg state "${state}" \
+              --arg context "taleemi-idara/${check}" \
+              --arg description "${description}" \
+              --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            curl --fail-with-body --silent --show-error --request POST \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+              --data "${payload}" > /dev/null
+          }
+
+          if [ "${RESOLVE_JOB}" != success ]; then
+            overall=failure
+            publish request failure
+          else
+            while IFS= read -r check; do
+              case "${check}" in
+                schema) publish schema "${SCHEMA_RESULT:-error}" ;;
+                tests) publish tests "${TESTS_RESULT:-error}" ;;
+                system-tests) publish system-tests "${SYSTEM_TESTS_RESULT:-error}" ;;
+                lint) publish lint "${LINT_RESULT:-error}" ;;
+                security) publish security "${SECURITY_RESULT:-error}" ;;
+                *) publish request failure ;;
+              esac
+            done < <(jq -r '.[]' <<< "${CHECKS_JSON:-[]}")
+          fi
+
+          {
+            echo "## Taleemi Idara verification"
+            echo
+            echo "Request: \`${REQUEST_ID:-unresolved}\`"
+            echo "Target: \`${TARGET_SHA:-unresolved}\`"
+            echo "Checks: \`${CHECKS_JSON:-[]}\`"
+            echo "Result: **${overall}**"
+            echo
+            echo "Database workflow: \`${DB_JOB}\`"
+            echo "Static workflow: \`${STATIC_JOB}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          test "${overall}" = success
