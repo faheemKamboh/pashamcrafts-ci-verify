@@ -127,9 +127,16 @@ jobs:
             detail="schema clean; hash=${committed_hash:0:12}"
           else
             result=failure
+            structural_changes="$(git diff --unified=0 -- db/schema.rb \
+              | grep -E '^[+-][[:space:]]*(ActiveRecord::Schema|create_table|t\.|add_foreign_key|add_index|enable_extension)' \
+              | head -n 20 \
+              | tr '\n\r' '  ' \
+              | cut -c1-1400 || true)"
             detail="schema differs ${numstat:-unknown}; committed=${committed_hash:0:12}; generated=${generated_hash:0:12}"
+            [ -z "${structural_changes}" ] || detail="${detail}; ${structural_changes}"
           fi
 
+          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-1800)"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
           echo "${detail}"
@@ -141,21 +148,36 @@ jobs:
         shell: bash
         run: |
           set +e
-          bin/rails test > "${RUNNER_TEMP}/tests.log" 2>&1
+          BACKTRACE=1 bin/rails test > "${RUNNER_TEMP}/tests.log" 2>&1
           status=$?
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
-          failures="$(awk '
-            /^[[:space:]]*(Failure|Error):[[:space:]]*$/ {
-              if (getline line) {
-                gsub(/\r/, "", line)
-                print line
-              }
-            }
-          ' "${RUNNER_TEMP}/tests.log" | sort -u | head -n 5 | paste -sd ';' -)"
+          failures="$(ruby - "${RUNNER_TEMP}/tests.log" <<'RUBY'
+            lines = File.readlines(ARGV.fetch(0), chomp: true)
+            details = []
+
+            lines.each_with_index do |line, index|
+              next unless line.strip.match?(/\A(?:Failure|Error):\z/)
+
+              window = lines[index, 45] || []
+              identifier = window.drop(1).find { |entry| !entry.strip.empty? }&.strip
+              exception_class = window.filter_map do |entry|
+                entry.strip[/\A([A-Z][A-Za-z0-9_]*(?:::[A-Z][A-Za-z0-9_]*)*)\s*:/, 1]
+              end.find { |name| name.include?("::") || name.end_with?("Error", "Exception", "Failure", "Assertion") }
+              frames = window.flat_map do |entry|
+                entry.scan(%r{(?:test|app|lib)/[A-Za-z0-9_./-]+\.rb:\d+})
+              end.uniq.first(4)
+
+              parts = [identifier, exception_class, frames.join(",")].compact.reject(&:empty?)
+              details << parts.join("|") unless parts.empty?
+            end
+
+            puts details.uniq.first(6).join(";")
+          RUBY
+          )"
           detail="${summary:-summary unavailable}; command=${status}"
           [ -z "${failures}" ] || detail="${detail}; ${failures}"
-          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-600)"
+          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-1800)"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
           echo "${detail}"
@@ -168,21 +190,36 @@ jobs:
         shell: bash
         run: |
           set +e
-          bin/rails test:system > "${RUNNER_TEMP}/system-tests.log" 2>&1
+          BACKTRACE=1 bin/rails test:system > "${RUNNER_TEMP}/system-tests.log" 2>&1
           status=$?
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/system-tests.log" | tail -n 1 || true)"
-          failures="$(awk '
-            /^[[:space:]]*(Failure|Error):[[:space:]]*$/ {
-              if (getline line) {
-                gsub(/\r/, "", line)
-                print line
-              }
-            }
-          ' "${RUNNER_TEMP}/system-tests.log" | sort -u | head -n 5 | paste -sd ';' -)"
+          failures="$(ruby - "${RUNNER_TEMP}/system-tests.log" <<'RUBY'
+            lines = File.readlines(ARGV.fetch(0), chomp: true)
+            details = []
+
+            lines.each_with_index do |line, index|
+              next unless line.strip.match?(/\A(?:Failure|Error):\z/)
+
+              window = lines[index, 55] || []
+              identifier = window.drop(1).find { |entry| !entry.strip.empty? }&.strip
+              exception_class = window.filter_map do |entry|
+                entry.strip[/\A([A-Z][A-Za-z0-9_]*(?:::[A-Z][A-Za-z0-9_]*)*)\s*:/, 1]
+              end.find { |name| name.include?("::") || name.end_with?("Error", "Exception", "Failure", "Assertion") }
+              frames = window.flat_map do |entry|
+                entry.scan(%r{(?:test|app|lib)/[A-Za-z0-9_./-]+\.rb:\d+})
+              end.uniq.first(5)
+
+              parts = [identifier, exception_class, frames.join(",")].compact.reject(&:empty?)
+              details << parts.join("|") unless parts.empty?
+            end
+
+            puts details.uniq.first(8).join(";")
+          RUBY
+          )"
           detail="${summary:-summary unavailable}; command=${status}"
           [ -z "${failures}" ] || detail="${detail}; ${failures}"
-          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-600)"
+          detail="$(printf '%s' "${detail}" | tr '\n\r' '  ' | cut -c1-2200)"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
           echo "${detail}"
