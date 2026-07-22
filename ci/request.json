@@ -1,20 +1,10 @@
 {
-  "request_id": "issue-80-order-guards-8ddcea4",
-  "target_sha": "8ddcea42b3b2e3a7e7920d6a07472bb0864afb6b",
+  "request_id": "issue-80-final-coverage-targeted-452a853",
+  "target_sha": "452a853e2d9f87e064db4c179685d663305f8251",
   "checks": ["targeted"],
   "specs": [
     "spec/models/order_shipping_guards_spec.rb",
-    "spec/jobs/shipping/complete_delivered_order_job_spec.rb",
-    "spec/services/shipping/defensive_guards_spec.rb",
-    "spec/services/shipping/shipping_flow_spec.rb",
-    "spec/services/shipping/confirm_delivery_spec.rb",
-    "spec/models/shipping_evidence_models_spec.rb",
-    "spec/models/order_state_transition_spec.rb",
-    "spec/requests/shipping_workflows_spec.rb",
     "spec/requests/shipping_evidence_spec.rb",
-    "spec/requests/shipping_views_spec.rb",
-    "spec/requests/admin/order_notifications_spec.rb",
-    "spec/requests/admin/order_transitions_spec.rb",
-    "spec/requests/admin/orders_spec.rb"
+    "spec/services/shipping/shipping_flow_spec.rb"
   ]
 }
