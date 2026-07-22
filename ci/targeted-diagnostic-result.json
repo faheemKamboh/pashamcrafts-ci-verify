@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-81-final-focused-15a5e108",
-  "target_sha": "15a5e1084ea8d5b2f35b6d2bbeca043d9972d168",
-  "detail": "84 examples, 0 failures; no failure detail"
+  "request_id": "issue-81-cancel-edge-targeted-6c1c7c42",
+  "target_sha": "6c1c7c42ff9824ab76b8123e8d005cf169aabd85",
+  "detail": "26 examples, 0 failures; no failure detail"
 }
