@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-81-transition-guards-targeted-63569280",
-  "target_sha": "63569280df1bbd80f50a1956a070af0fa1781578",
+  "request_id": "issue-81-transition-guards-targeted-46414d16",
+  "target_sha": "46414d160eb3ef4b7516e64f7f21201f5276adec",
   "checks": ["targeted"],
   "specs": [
     "spec/services/orders/transition_edge_guards_spec.rb",
