@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-81-final-targeted-6b5ce993",
-  "target_sha": "6b5ce993b34e872a27950c176c74dde4e6d87743",
-  "detail": "59 examples, 0 failures; no failure detail"
+  "request_id": "issue-81-defensive-targeted-e421d785",
+  "target_sha": "e421d785e4a357517b1f59740670d37ed07e9e8c",
+  "detail": "58 examples, 0 failures; no failure detail"
 }
