@@ -25,12 +25,32 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 1
+          show-progress: false
 
       - name: Validate workflow syntax
+        id: actionlint
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           docker run --rm \
             -v "${PWD}:/repo" \
             -w /repo \
-            rhysd/actionlint:1.7.7
+            rhysd/actionlint:1.7.7 \
+            > "${RUNNER_TEMP}/actionlint.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          exit "${status}"
+
+      - name: Upload workflow diagnostics
+        if: steps.actionlint.outputs.result != 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: actionlint-diagnostics
+          path: ${{ runner.temp }}/actionlint.log
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Enforce workflow validation
+        run: test "${{ steps.actionlint.outputs.result }}" = success
