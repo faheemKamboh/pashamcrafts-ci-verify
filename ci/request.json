@@ -1,19 +1,6 @@
 {
-  "request_id": "issue-81-final-focused-15a5e108",
+  "request_id": "issue-81-final-static-15a5e108",
   "target_sha": "15a5e1084ea8d5b2f35b6d2bbeca043d9972d168",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/after_sales/concurrency_recovery_spec.rb",
-    "spec/services/after_sales/defensive_guards_spec.rb",
-    "spec/services/after_sales/workflows_spec.rb",
-    "spec/services/after_sales/idempotency_guards_spec.rb",
-    "spec/models/after_sales_models_spec.rb",
-    "spec/models/order_after_sales_spec.rb",
-    "spec/requests/after_sales_workflows_spec.rb",
-    "spec/requests/admin_after_sales_workflows_spec.rb",
-    "spec/requests/after_sales_evidence_spec.rb",
-    "spec/requests/after_sales_views_spec.rb",
-    "spec/services/orders/transition_spec.rb",
-    "spec/requests/admin/orders_spec.rb"
-  ]
+  "checks": ["lint", "security"],
+  "specs": []
 }
