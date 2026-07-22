@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-model-safeguards-b439a34",
-  "target_sha": "b439a34aef82ba0093d0573b71271656e4e60442",
+  "request_id": "issue-80-model-safeguards-96103c5",
+  "target_sha": "96103c54b2780fdf9ab177ae64808113718fc964",
   "detail": "66 examples, 1 failures; ./spec/models/shipping_evidence_models_spec.rb:69 | RSpec::Expectations::ExpectationNotMetError: expected [\"must be a valid HTTPS link\"] to include \"must be a valid link\" | ./spec/models/shipping_evidence_models_spec.rb:76:in 'block (2 levels) in <top (required)>'"
 }
