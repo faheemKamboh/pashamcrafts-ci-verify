@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-95-order-messages-targeted-7235449c",
-  "target_sha": "7235449cb969ff74dfb49f2eef350d0e95ff46f5",
+  "request_id": "issue-95-order-messages-targeted-66fa9465",
+  "target_sha": "66fa946583a1004594d34956061ad51260dcbeae",
   "checks": ["targeted"],
   "specs": [
     "spec/services/order_messages/create_spec.rb",
