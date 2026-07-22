@@ -266,22 +266,11 @@ jobs:
 
           if [ "${status}" -ne 0 ] && [ "${PROJECT}" = "taleemi_idara" ]; then
             git show "HEAD:${schema_path}" > "${RUNNER_TEMP}/committed-schema"
-            ruby - "${RUNNER_TEMP}/committed-schema" "${schema_path}" \
-              "${RUNNER_TEMP}/committed-schema.normalized" "${RUNNER_TEMP}/generated-schema.normalized" <<'RUBY'
-              def normalize_schema(content)
-                content.lines.map do |line|
-                  next line unless line.include?("t.check_constraint")
-
-                  line
-                    .gsub(/'([^']*)'::character varying(?:::text)?/, "'\\1'")
-                    .gsub(/\]::text\[\]/, "]")
-                end.join
-              end
-
-              committed_path, generated_path, committed_output, generated_output = ARGV
-              File.write(committed_output, normalize_schema(File.read(committed_path)))
-              File.write(generated_output, normalize_schema(File.read(generated_path)))
-            RUBY
+            ruby ../ci/normalize-rails-schema.rb \
+              "${RUNNER_TEMP}/committed-schema" \
+              "${schema_path}" \
+              "${RUNNER_TEMP}/committed-schema.normalized" \
+              "${RUNNER_TEMP}/generated-schema.normalized"
 
             if cmp -s "${RUNNER_TEMP}/committed-schema.normalized" "${RUNNER_TEMP}/generated-schema.normalized"; then
               status=0
