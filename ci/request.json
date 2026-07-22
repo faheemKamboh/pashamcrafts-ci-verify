@@ -1,6 +1,9 @@
 {
-  "request_id": "issue-81-release-full-e0f1abf6",
-  "target_sha": "e0f1abf6393f7b4e5d5af37e19f779f2d137ad83",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-95-order-messages-targeted-9194e5c3",
+  "target_sha": "9194e5c331a12b4b5c0ffdf7362d18ff1a8c200d",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/services/order_messages/create_spec.rb",
+    "spec/requests/order_messages_spec.rb"
+  ]
 }
