@@ -1,10 +1,6 @@
 {
-  "request_id": "issue-81-transition-guards-targeted-46414d16",
+  "request_id": "issue-81-release-full-46414d16",
   "target_sha": "46414d160eb3ef4b7516e64f7f21201f5276adec",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/orders/transition_edge_guards_spec.rb",
-    "spec/services/orders/transition_spec.rb",
-    "spec/services/after_sales/cancellation_decision_edges_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
