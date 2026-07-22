@@ -1,8 +1,9 @@
 {
-  "request_id": "issue-80-stale-request-fixes-2413629",
-  "target_sha": "241362997fc8802b0e175072f495dc5557112a6f",
+  "request_id": "issue-80-defensive-coverage-d818f81",
+  "target_sha": "d818f819328cc51e66bf1926cd9d4ac052fda4c9",
   "checks": ["targeted"],
   "specs": [
+    "spec/services/shipping/defensive_guards_spec.rb",
     "spec/requests/admin/order_notifications_spec.rb",
     "spec/requests/admin/orders_spec.rb",
     "spec/models/order_state_transition_spec.rb",
