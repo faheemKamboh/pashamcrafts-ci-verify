@@ -21,7 +21,7 @@ Repository names, checkout commands, test commands, and tokens are selected only
 - Workflow permissions default to read-only.
 - Diagnostic logs and browser screenshots are encrypted before upload.
 - Encrypted diagnostic artifacts expire after one day.
-- The public workflow never accepts secret values, repository names, or commands from `ci/request.json`.
+- The public workflow never accepts secret values, repository names, or commands from request files.
 - Statuses are published only on this public validator repository; private repositories receive no write token.
 
 ## Request methods
@@ -36,9 +36,14 @@ Run **Dispatch approved private-project checks** and provide:
 - optional `request_id`
 - optional test paths in `specs` for a targeted run
 
-### Committed request
+### Committed requests
 
-Update `ci/request.json` on `main`. The workflow runs only when that file changes.
+The projects use separate request channels so one project cannot overwrite another project’s active request:
+
+- `ci/request.json` — legacy PashamCrafts channel
+- `ci/requests/taleemi_idara.json` — isolated Taleemi Idara channel
+
+The Taleemi Idara request file is permanently bound to `taleemi_idara` and cannot select another repository.
 
 ```json
 {
@@ -57,7 +62,7 @@ Update `ci/request.json` on `main`. The workflow runs only when that file change
 | `schema` | Yes | Yes |
 | `tests` | RSpec with coverage gate | Rails/Minitest |
 | `system-tests` | No | Rails Chrome system tests |
-| `targeted` | `spec/**/*_spec.rb` | `test/**/*_test.rb` |
+| `targeted` | `spec/**/*_spec.rb` | Manual multi-project workflow only |
 | `lint` | RuboCop | RuboCop |
 | `security` | Brakeman | Brakeman and Bundler Audit |
 | `restore` | Backup/restore drill | No |
