@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-final-coverage-targeted-452a853",
-  "target_sha": "452a853e2d9f87e064db4c179685d663305f8251",
-  "detail": "14 examples, 0 failures; no failure detail"
+  "request_id": "issue-80-concurrency-targeted-884dc47",
+  "target_sha": "884dc47c6e50bb51ec32b20c3230b2d54296f02b",
+  "detail": "16 examples, 0 failures; no failure detail"
 }
