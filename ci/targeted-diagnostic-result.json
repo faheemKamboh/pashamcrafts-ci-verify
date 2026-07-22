@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-81-transition-guards-targeted-63569280",
-  "target_sha": "63569280df1bbd80f50a1956a070af0fa1781578",
-  "detail": "18 examples, 2 failures; ./spec/services/orders/transition_edge_guards_spec.rb:43 | RSpec::Expectations::ExpectationNotMetError: expected Orders::Transition::InvalidTransition with message matching /already Accepted/i, got #<Orders::Transition::InvalidTransition: Order cannot move from Accepted to Accepted> with backtrace: | ./spec/services/orders/transition_edge_guards_spec.rb:48:in 'block (2 levels) in <top (required)>' || ./spec/services/orders/transition_edge_guards_spec.rb:51 | RSpec::Expectations::ExpectationNotMetError: expected Orders::Transition::InvalidTransition with message matching /Use the cancellation state transition/i, got #<Orders::Transition::InvalidTransition: Order cannot move from Pending review to Cancelled> with backtrace: | ./spec/services/orders/transition_edge_guards_spec.rb:54:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-81-transition-guards-targeted-46414d16",
+  "target_sha": "46414d160eb3ef4b7516e64f7f21201f5276adec",
+  "detail": "18 examples, 1 failures; ./spec/services/orders/transition_edge_guards_spec.rb:51 | RSpec::Expectations::ExpectationNotMetError: expected Orders::Transition::InvalidTransition with message matching /Use the cancellation state transition/i, got #<Orders::Transition::InvalidTransition: Order cannot move from Accepted to Cancelled> with backtrace: | ./spec/services/orders/transition_edge_guards_spec.rb:56:in 'block (2 levels) in <top (required)>'"
 }
