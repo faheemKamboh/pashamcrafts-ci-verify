@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-stale-request-fixes-2413629",
-  "target_sha": "241362997fc8802b0e175072f495dc5557112a6f",
-  "detail": "23 examples, 0 failures; no failure detail"
+  "request_id": "issue-80-defensive-coverage-d818f81",
+  "target_sha": "d818f819328cc51e66bf1926cd9d4ac052fda4c9",
+  "detail": "31 examples, 0 failures; no failure detail"
 }
