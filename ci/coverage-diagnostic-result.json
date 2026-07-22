@@ -1,21 +1,128 @@
 {
-  "request_id": "issue-79-post-quote-guard-coverage",
-  "target_sha": "50cdb3cc3bbdc786fcb8b1c3d06cd71fe0fc0b0e",
-  "summary": "1138 examples, 0 failures",
-  "coverage": "97.99",
+  "request_id": "issue-81-pre-schema-coverage-c5eb4fa",
+  "target_sha": "c5eb4fa46de7ff3d0e129da8c3ab47c23a62e453",
+  "summary": "1225 examples, 0 failures",
+  "coverage": "97.43",
   "command_status": 2,
   "failure_locations": [],
   "uncovered": [
     {
+      "file": "app/services/after_sales/decide_cancellation.rb",
+      "missing_lines": [
+        45,
+        46,
+        62,
+        68,
+        96,
+        132,
+        154,
+        155,
+        158,
+        160,
+        166
+      ],
+      "executable_lines": 75,
+      "missed_count": 11
+    },
+    {
+      "file": "app/services/after_sales/decide_claim.rb",
+      "missing_lines": [
+        52,
+        97,
+        99,
+        115,
+        119,
+        149,
+        154,
+        156
+      ],
+      "executable_lines": 70,
+      "missed_count": 8
+    },
+    {
+      "file": "app/models/order.rb",
+      "missing_lines": [
+        146,
+        169,
+        219,
+        223,
+        280,
+        297
+      ],
+      "executable_lines": 181,
+      "missed_count": 6
+    },
+    {
+      "file": "app/services/after_sales/submit_claim.rb",
+      "missing_lines": [
+        93,
+        95,
+        105,
+        139,
+        141,
+        143
+      ],
+      "executable_lines": 60,
+      "missed_count": 6
+    },
+    {
+      "file": "app/controllers/admin/claim_decisions_controller.rb",
+      "missing_lines": [
+        4,
+        5,
+        15,
+        17,
+        23
+      ],
+      "executable_lines": 10,
+      "missed_count": 5
+    },
+    {
+      "file": "app/models/order_cancellation_request.rb",
+      "missing_lines": [
+        28,
+        46,
+        52,
+        60,
+        67
+      ],
+      "executable_lines": 44,
+      "missed_count": 5
+    },
+    {
+      "file": "app/services/after_sales/record_refund.rb",
+      "missing_lines": [
+        66,
+        87,
+        91,
+        94,
+        96
+      ],
+      "executable_lines": 48,
+      "missed_count": 5
+    },
+    {
+      "file": "app/services/after_sales/request_cancellation.rb",
+      "missing_lines": [
+        59,
+        61,
+        87,
+        90,
+        92
+      ],
+      "executable_lines": 47,
+      "missed_count": 5
+    },
+    {
       "file": "app/services/orders/transition.rb",
       "missing_lines": [
-        63,
-        118,
-        122,
-        187,
-        257
+        66,
+        132,
+        137,
+        209,
+        297
       ],
-      "executable_lines": 162,
+      "executable_lines": 190,
       "missed_count": 5
     },
     {
@@ -30,14 +137,14 @@
       "missed_count": 4
     },
     {
-      "file": "app/services/custom_orders/issue_final_quote.rb",
+      "file": "app/models/order_refund.rb",
       "missing_lines": [
-        36,
-        102,
-        115,
-        142
+        59,
+        67,
+        70,
+        83
       ],
-      "executable_lines": 62,
+      "executable_lines": 61,
       "missed_count": 4
     },
     {
@@ -70,6 +177,16 @@
         50
       ],
       "executable_lines": 34,
+      "missed_count": 3
+    },
+    {
+      "file": "app/controllers/admin/order_refunds_controller.rb",
+      "missing_lines": [
+        6,
+        9,
+        25
+      ],
+      "executable_lines": 14,
       "missed_count": 3
     },
     {
@@ -143,16 +260,6 @@
       "missed_count": 3
     },
     {
-      "file": "app/models/order.rb",
-      "missing_lines": [
-        150,
-        240,
-        247
-      ],
-      "executable_lines": 153,
-      "missed_count": 3
-    },
-    {
       "file": "app/models/product_category.rb",
       "missing_lines": [
         39,
@@ -160,6 +267,16 @@
         84
       ],
       "executable_lines": 63,
+      "missed_count": 3
+    },
+    {
+      "file": "app/services/after_sales/transition_refund.rb",
+      "missing_lines": [
+        44,
+        93,
+        95
+      ],
+      "executable_lines": 58,
       "missed_count": 3
     },
     {
@@ -243,6 +360,26 @@
       "missed_count": 3
     },
     {
+      "file": "app/services/shipping/record_handover.rb",
+      "missing_lines": [
+        94,
+        95,
+        101
+      ],
+      "executable_lines": 61,
+      "missed_count": 3
+    },
+    {
+      "file": "app/services/shipping/record_packing_proof.rb",
+      "missing_lines": [
+        78,
+        79,
+        85
+      ],
+      "executable_lines": 50,
+      "missed_count": 3
+    },
+    {
       "file": "app/controllers/admin/inventory_controller.rb",
       "missing_lines": [
         11,
@@ -294,105 +431,6 @@
         130
       ],
       "executable_lines": 90,
-      "missed_count": 2
-    },
-    {
-      "file": "app/models/customer_login_attempt.rb",
-      "missing_lines": [
-        61,
-        62
-      ],
-      "executable_lines": 27,
-      "missed_count": 2
-    },
-    {
-      "file": "app/models/material_purchase.rb",
-      "missing_lines": [
-        27,
-        33
-      ],
-      "executable_lines": 24,
-      "missed_count": 2
-    },
-    {
-      "file": "app/models/product_variant.rb",
-      "missing_lines": [
-        45,
-        124
-      ],
-      "executable_lines": 90,
-      "missed_count": 2
-    },
-    {
-      "file": "app/services/checkout/create_reservation.rb",
-      "missing_lines": [
-        46,
-        50
-      ],
-      "executable_lines": 116,
-      "missed_count": 2
-    },
-    {
-      "file": "app/services/custom_orders/decide_approval.rb",
-      "missing_lines": [
-        69,
-        82
-      ],
-      "executable_lines": 79,
-      "missed_count": 2
-    },
-    {
-      "file": "app/services/customer_accounts/issue_recovery.rb",
-      "missing_lines": [
-        10,
-        27
-      ],
-      "executable_lines": 16,
-      "missed_count": 2
-    },
-    {
-      "file": "app/services/inquiries/convert.rb",
-      "missing_lines": [
-        59,
-        101
-      ],
-      "executable_lines": 55,
-      "missed_count": 2
-    },
-    {
-      "file": "app/services/inquiries/submit.rb",
-      "missing_lines": [
-        58,
-        95
-      ],
-      "executable_lines": 51,
-      "missed_count": 2
-    },
-    {
-      "file": "app/services/inventory/ledger.rb",
-      "missing_lines": [
-        134,
-        202
-      ],
-      "executable_lines": 121,
-      "missed_count": 2
-    },
-    {
-      "file": "app/services/orders/transition_policy.rb",
-      "missing_lines": [
-        66,
-        72
-      ],
-      "executable_lines": 19,
-      "missed_count": 2
-    },
-    {
-      "file": "app/services/payments/submit.rb",
-      "missing_lines": [
-        39,
-        136
-      ],
-      "executable_lines": 75,
       "missed_count": 2
     }
   ]
