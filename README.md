@@ -6,11 +6,11 @@ The repository name is retained to avoid disrupting the existing PashamCrafts in
 
 ## Approved projects
 
-| Project input | Private repository | Read-only secret |
-| --- | --- | --- |
-| `pashamcrafts` | `faheemKamboh/pashamcrafts` | `PASHAMCRAFTS_READ_TOKEN` |
-| `taleemi_idara` | `Ustaad-Ji/taleemi_idara` | `TALEEMI_IDARA_READ_TOKEN` |
-| `greensvilla` | `GreensVilla/greensvilla` | `GREENSVILLA_READ_TOKEN` |
+| Project input | Private repository | Read-only secret | Optional status secret |
+| --- | --- | --- | --- |
+| `pashamcrafts` | `faheemKamboh/pashamcrafts` | `PASHAMCRAFTS_READ_TOKEN` | `PASHAMCRAFTS_STATUS_TOKEN` |
+| `taleemi_idara` | `Ustaad-Ji/taleemi_idara` | `TALEEMI_IDARA_READ_TOKEN` | `TALEEMI_IDARA_STATUS_TOKEN` |
+| `greensvilla` | `GreensVilla/greensvilla` | `GREENSVILLA_READ_TOKEN` | `GREENSVILLA_STATUS_TOKEN` |
 
 Repository names, checkout commands, test commands, and tokens are selected only from this fixed allow-list. A request cannot supply an arbitrary repository or shell command.
 
@@ -25,7 +25,8 @@ Repository names, checkout commands, test commands, and tokens are selected only
 - Raw logs, screenshots, database dumps, generated assets, Docker images, and application artifacts are never uploaded.
 - Encrypted diagnostic artifacts expire after one day.
 - The public workflow never accepts secret values, repository names, or commands from request files.
-- Statuses are published only on this public validator repository; private repositories receive no write token.
+- Statuses are always published on this public validator repository.
+- Private target commit statuses are published only when the matching optional status token is configured.
 
 ## Request methods
 
@@ -39,6 +40,8 @@ Run **Dispatch approved private-project checks** and provide:
 - optional `request_id`
 - optional test paths in `specs` for a targeted run
 
+GreensVilla also has a dedicated convenience workflow: **Validate GreensVilla request**. It hardcodes `project: greensvilla`, accepts the same `target_sha`, `checks`, `request_id`, and `specs` fields, and delegates to the shared verifier.
+
 ### Committed requests
 
 Existing project-specific request channels remain separate:
@@ -46,7 +49,7 @@ Existing project-specific request channels remain separate:
 - `ci/request.json` — legacy PashamCrafts channel
 - `ci/requests/taleemi_idara.json` — isolated Taleemi Idara channel
 
-GreensVilla initially uses explicit `workflow_dispatch`, which avoids creating or updating a public request file merely to validate a private commit.
+GreensVilla uses explicit `workflow_dispatch`, which avoids creating or updating a public request file merely to validate a private commit.
 
 ## GreensVilla examples
 
@@ -101,7 +104,7 @@ The `full` preset cannot be combined with individual checks. Complete tests and 
 
 ## Secret setup
 
-Each token must be a fine-grained personal access token with read-only **Contents** access to only its corresponding private repository.
+Each checkout token must be a fine-grained personal access token with read-only **Contents** access to only its corresponding private repository.
 
 For GreensVilla, add this repository Actions secret:
 
@@ -110,3 +113,11 @@ GREENSVILLA_READ_TOKEN
 ```
 
 Grant it access only to `GreensVilla/greensvilla` with **Contents: Read-only**. Do not grant Actions, Administration, Issues, Pull requests, Secrets, or write permissions.
+
+To publish verifier results directly on GreensVilla commits and PRs, also add:
+
+```text
+GREENSVILLA_STATUS_TOKEN
+```
+
+Use a separate fine-grained token limited to `GreensVilla/greensvilla` with **Commit statuses: Read and write**. If GitHub requires contents access for repository lookup, grant **Contents: Read-only** as well. Do not reuse the checkout token for status writes.

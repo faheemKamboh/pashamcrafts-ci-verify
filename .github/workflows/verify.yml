@@ -1,6 +1,28 @@
 name: Dispatch approved private-project checks
 
 on:
+  workflow_call:
+    inputs:
+      project:
+        description: Approved private project
+        required: true
+        type: string
+      request_id:
+        description: Unique request identifier
+        required: false
+        type: string
+      target_sha:
+        description: Exact private-project commit SHA
+        required: true
+        type: string
+      checks:
+        description: Comma-separated checks, or full
+        required: true
+        type: string
+      specs:
+        description: Comma- or newline-separated test paths when targeted is requested
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       project:
@@ -346,9 +368,15 @@ jobs:
           SECURITY_RESULT: ${{ needs.static_checks.outputs.security_result }}
           ASSETS_RESULT: ${{ needs.static_checks.outputs.assets_result }}
           DOCKER_RESULT: ${{ needs.static_checks.outputs.docker_result }}
+          PASHAMCRAFTS_STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
+          TALEEMI_IDARA_STATUS_TOKEN: ${{ secrets.TALEEMI_IDARA_STATUS_TOKEN }}
+          GREENSVILLA_STATUS_TOKEN: ${{ secrets.GREENSVILLA_STATUS_TOKEN }}
         run: |
           set -euo pipefail
           overall=success
+          target_repo=""
+          target_token=""
+          target_statuses=skipped
 
           publish() {
             local check="$1" result="$2" state description payload prefix
@@ -371,7 +399,32 @@ jobs:
               --header "X-GitHub-Api-Version: 2022-11-28" \
               "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
               --data "${payload}" > /dev/null
+
+            if [ -n "${target_repo}" ] && [ -n "${target_token}" ] && [ -n "${TARGET_SHA:-}" ]; then
+              curl --fail-with-body --silent --show-error --request POST \
+                --header "Authorization: Bearer ${target_token}" \
+                --header "Accept: application/vnd.github+json" \
+                --header "X-GitHub-Api-Version: 2022-11-28" \
+                "${{ github.api_url }}/repos/${target_repo}/statuses/${TARGET_SHA}" \
+                --data "${payload}" > /dev/null
+              target_statuses=published
+            fi
           }
+
+          case "${PROJECT:-}" in
+            pashamcrafts)
+              target_repo="faheemKamboh/pashamcrafts"
+              target_token="${PASHAMCRAFTS_STATUS_TOKEN}"
+              ;;
+            taleemi_idara)
+              target_repo="Ustaad-Ji/taleemi_idara"
+              target_token="${TALEEMI_IDARA_STATUS_TOKEN}"
+              ;;
+            greensvilla)
+              target_repo="GreensVilla/greensvilla"
+              target_token="${GREENSVILLA_STATUS_TOKEN}"
+              ;;
+          esac
 
           if [ "${RESOLVE_JOB}" != success ]; then
             overall=failure
@@ -405,6 +458,7 @@ jobs:
             echo
             echo "Database workflow: \`${DB_JOB}\`"
             echo "Static/release workflow: \`${STATIC_JOB}\`"
+            echo "Target status publication: \`${target_statuses}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
           test "${overall}" = success
