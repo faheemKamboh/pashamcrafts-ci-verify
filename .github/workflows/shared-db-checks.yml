@@ -314,7 +314,7 @@ jobs:
               ;;
           esac
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          exit $([ "${result}" = success ] && echo 0 || echo 1)
+          if [ "${result}" = success ]; then exit 0; else exit 1; fi
 
       - name: Run project system tests
         id: system_tests
@@ -390,7 +390,7 @@ jobs:
 
       - name: Run PashamCrafts backup and restore drill
         id: restore
-        if: inputs.run_restore
+        if: inputs.run_restore && inputs.project == 'pashamcrafts'
         continue-on-error: true
         working-directory: app
         shell: bash
@@ -407,8 +407,9 @@ jobs:
             bin/rails runner 'Audit::Recorder.record!(action: "backup.restore_drill")' &&
             bin/backup_database &&
             createdb --host=localhost --username=postgres pashamcrafts_restore_test &&
-            export BACKUP_FILE="$(find "${BACKUP_DIR}" -name '*.dump' -type f | head -n 1)" &&
-            test -n "${BACKUP_FILE}" &&
+            backup_file="$(find "${BACKUP_DIR}" -name '*.dump' -type f | head -n 1)" &&
+            test -n "${backup_file}" &&
+            export BACKUP_FILE="${backup_file}" &&
             bin/verify_database_restore &&
             test "$(psql "${RESTORE_DATABASE_URL}" -Atqc "SELECT COUNT(*) FROM audit_events WHERE action = 'backup.restore_drill'")" = "1"
           } > "${RUNNER_TEMP}/restore.log" 2>&1
@@ -420,7 +421,7 @@ jobs:
 
       - name: Run GreensVilla seed verification
         id: seeds
-        if: inputs.run_seeds && steps.database.outputs.result == 'success'
+        if: inputs.run_seeds && inputs.project == 'greensvilla' && steps.database.outputs.result == 'success'
         continue-on-error: true
         working-directory: app
         shell: bash
