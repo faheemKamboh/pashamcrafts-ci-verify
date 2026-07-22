@@ -1,8 +1,11 @@
-name: Shared static PashamCrafts checks
+name: Shared static private-project checks
 
 on:
   workflow_call:
     inputs:
+      project:
+        required: true
+        type: string
       request_id:
         required: true
         type: string
@@ -19,7 +22,9 @@ on:
         type: boolean
     secrets:
       PASHAMCRAFTS_READ_TOKEN:
-        required: true
+        required: false
+      TALEEMI_IDARA_READ_TOKEN:
+        required: false
     outputs:
       result:
         value: ${{ jobs.checks.outputs.result }}
@@ -48,12 +53,45 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Require configured project token
+        shell: bash
+        env:
+          PROJECT: ${{ inputs.project }}
+          PASHAMCRAFTS_TOKEN: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          TALEEMI_IDARA_TOKEN: ${{ secrets.TALEEMI_IDARA_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          case "${PROJECT}" in
+            pashamcrafts)
+              [ -n "${PASHAMCRAFTS_TOKEN}" ] || { echo "PASHAMCRAFTS_READ_TOKEN is not configured."; exit 1; }
+              ;;
+            taleemi_idara)
+              [ -n "${TALEEMI_IDARA_TOKEN}" ] || { echo "TALEEMI_IDARA_READ_TOKEN is not configured."; exit 1; }
+              ;;
+            *)
+              echo "Unsupported project."
+              exit 1
+              ;;
+          esac
+
       - name: Checkout exact PashamCrafts commit
+        if: inputs.project == 'pashamcrafts'
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
         with:
           repository: faheemKamboh/pashamcrafts
           ref: ${{ inputs.target_sha }}
           token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Checkout exact Taleemi Idara commit
+        if: inputs.project == 'taleemi_idara'
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: Ustaad-Ji/taleemi_idara
+          ref: ${{ inputs.target_sha }}
+          token: ${{ secrets.TALEEMI_IDARA_READ_TOKEN }}
           persist-credentials: false
           fetch-depth: 1
           path: app
@@ -82,22 +120,37 @@ jobs:
           grep -E '[0-9]+ files? inspected' "${RUNNER_TEMP}/rubocop.log" | tail -n 1 || true
           exit "${status}"
 
-      - name: Run Brakeman
+      - name: Run security checks
         id: security
         if: inputs.run_security
         continue-on-error: true
         working-directory: app
         shell: bash
+        env:
+          PROJECT: ${{ inputs.project }}
         run: |
           set +e
-          bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error \
-            -f json -o "${RUNNER_TEMP}/brakeman.json" \
-            > "${RUNNER_TEMP}/brakeman.log" 2>&1
-          status=$?
-          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          if [ "${PROJECT}" = "pashamcrafts" ]; then
+            bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error \
+              -f json -o "${RUNNER_TEMP}/brakeman.json" \
+              > "${RUNNER_TEMP}/brakeman.log" 2>&1
+            security_status=$?
+          else
+            bin/brakeman --no-pager > "${RUNNER_TEMP}/brakeman.log" 2>&1
+            brakeman_status=$?
+            bin/bundler-audit > "${RUNNER_TEMP}/bundler-audit.log" 2>&1
+            audit_status=$?
+            if [ "${brakeman_status}" -eq 0 ] && [ "${audit_status}" -eq 0 ]; then
+              security_status=0
+            else
+              security_status=1
+            fi
+          fi
+
+          result=$([ "${security_status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          echo "Brakeman: ${result^^}"
-          exit "${status}"
+          echo "Security: ${result^^}"
+          exit "${security_status}"
 
       - name: Collect static results
         id: collect
@@ -129,13 +182,14 @@ jobs:
             "${RUNNER_TEMP}/encrypted-static-diagnostics" \
             "${RUNNER_TEMP}/rubocop.log" \
             "${RUNNER_TEMP}/brakeman.log" \
-            "${RUNNER_TEMP}/brakeman.json"
+            "${RUNNER_TEMP}/brakeman.json" \
+            "${RUNNER_TEMP}/bundler-audit.log"
 
       - name: Upload encrypted static diagnostics
         if: always() && steps.collect.outputs.result != 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: encrypted-static-${{ inputs.request_id }}
+          name: encrypted-static-${{ inputs.project }}-${{ inputs.request_id }}
           path: ${{ runner.temp }}/encrypted-static-diagnostics
           retention-days: 1
           if-no-files-found: error
