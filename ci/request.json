@@ -1,6 +1,11 @@
 {
-  "request_id": "issue-80-final-full-a3c4910",
-  "target_sha": "a3c49108aa47740df081630e91445b946ac8deeb",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-80-attribution-targeted-cb1127e",
+  "target_sha": "cb1127ebf862b3cbedcccab83a3a05c27d8ed0fd",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/models/order_state_transition_spec.rb",
+    "spec/services/shipping/shipping_flow_spec.rb",
+    "spec/services/orders/transition_spec.rb",
+    "spec/services/orders/transition_defensive_guards_spec.rb"
+  ]
 }
