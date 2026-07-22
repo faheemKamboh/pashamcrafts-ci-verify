@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-final-targeted-762f2fc",
-  "target_sha": "762f2fccc6c2f8afd9fcdbbeeb79c40163d20b44",
-  "detail": "72 examples, 1 failures; ./spec/models/shipping_evidence_models_spec.rb:69 | RSpec::Expectations::ExpectationNotMetError: expected [\"must be a valid HTTPS link\"] to include \"must be a valid link\" | ./spec/models/shipping_evidence_models_spec.rb:79:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-80-final-targeted-434eb4f",
+  "target_sha": "434eb4fc16eca4252fc0e03142615fbb720b3a6f",
+  "detail": "72 examples, 0 failures; no failure detail"
 }
