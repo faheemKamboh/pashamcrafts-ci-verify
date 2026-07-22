@@ -1,8 +1,9 @@
 {
-  "request_id": "issue-80-final-targeted-434eb4f",
-  "target_sha": "434eb4fc16eca4252fc0e03142615fbb720b3a6f",
+  "request_id": "issue-80-order-guards-8ddcea4",
+  "target_sha": "8ddcea42b3b2e3a7e7920d6a07472bb0864afb6b",
   "checks": ["targeted"],
   "specs": [
+    "spec/models/order_shipping_guards_spec.rb",
     "spec/jobs/shipping/complete_delivered_order_job_spec.rb",
     "spec/services/shipping/defensive_guards_spec.rb",
     "spec/services/shipping/shipping_flow_spec.rb",
