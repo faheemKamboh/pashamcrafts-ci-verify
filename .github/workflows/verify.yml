@@ -1,14 +1,21 @@
-name: Dispatch approved PashamCrafts checks
+name: Dispatch approved private-project checks
 
 on:
   workflow_dispatch:
     inputs:
+      project:
+        description: Approved private project
+        required: true
+        type: choice
+        options:
+          - pashamcrafts
+          - taleemi_idara
       request_id:
         description: Unique request identifier
         required: false
         type: string
       target_sha:
-        description: Exact PashamCrafts commit SHA
+        description: Exact private-project commit SHA
         required: true
         type: string
       checks:
@@ -17,17 +24,13 @@ on:
         default: full
         type: string
       specs:
-        description: Comma- or newline-separated spec paths when targeted is requested
+        description: Comma- or newline-separated test paths when targeted is requested
         required: false
         type: string
   push:
     branches: [main]
     paths:
       - "ci/request.json"
-      - "ci/encrypt-diagnostics.sh"
-      - ".github/workflows/verify.yml"
-      - ".github/workflows/shared-db-checks.yml"
-      - ".github/workflows/shared-static-checks.yml"
 
 permissions:
   contents: read
@@ -37,6 +40,8 @@ jobs:
     name: Resolve explicit request
     runs-on: ubuntu-latest
     outputs:
+      project: ${{ steps.request.outputs.project }}
+      status_prefix: ${{ steps.request.outputs.status_prefix }}
       request_id: ${{ steps.request.outputs.request_id }}
       target_sha: ${{ steps.request.outputs.target_sha }}
       checks_json: ${{ steps.request.outputs.checks_json }}
@@ -44,6 +49,7 @@ jobs:
       run_db: ${{ steps.request.outputs.run_db }}
       run_schema: ${{ steps.request.outputs.run_schema }}
       run_tests: ${{ steps.request.outputs.run_tests }}
+      run_system_tests: ${{ steps.request.outputs.run_system_tests }}
       run_targeted: ${{ steps.request.outputs.run_targeted }}
       run_restore: ${{ steps.request.outputs.run_restore }}
       run_static: ${{ steps.request.outputs.run_static }}
@@ -60,28 +66,45 @@ jobs:
         id: request
         shell: bash
         env:
+          DISPATCH_PROJECT: ${{ inputs.project }}
           DISPATCH_REQUEST_ID: ${{ inputs.request_id }}
           DISPATCH_TARGET_SHA: ${{ inputs.target_sha }}
           DISPATCH_CHECKS: ${{ inputs.checks }}
           DISPATCH_SPECS: ${{ inputs.specs }}
         run: |
           set -euo pipefail
+
           checks_file="${RUNNER_TEMP}/checks.txt"
           specs_file="${RUNNER_TEMP}/specs.txt"
           : > "${checks_file}"
           : > "${specs_file}"
 
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            project="${DISPATCH_PROJECT}"
             request_id="${DISPATCH_REQUEST_ID:-manual-${GITHUB_RUN_ID}}"
             target_sha="${DISPATCH_TARGET_SHA}"
             printf '%s\n' "${DISPATCH_CHECKS}" | tr ',' '\n' > "${checks_file}"
             printf '%s\n' "${DISPATCH_SPECS}" | tr ',' '\n' > "${specs_file}"
           else
+            project="$(jq -er '.project // "pashamcrafts"' ci/request.json)"
             request_id="$(jq -er '.request_id' ci/request.json)"
             target_sha="$(jq -er '.target_sha' ci/request.json)"
             jq -r '.checks[]?' ci/request.json > "${checks_file}"
             jq -r '.specs[]?' ci/request.json > "${specs_file}"
           fi
+
+          case "${project}" in
+            pashamcrafts)
+              status_prefix="pashamcrafts"
+              ;;
+            taleemi_idara)
+              status_prefix="taleemi-idara"
+              ;;
+            *)
+              echo "Unsupported project."
+              exit 1
+              ;;
+          esac
 
           [[ "${request_id}" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || { echo "Invalid request identifier."; exit 1; }
           [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid target SHA."; exit 1; }
@@ -92,7 +115,7 @@ jobs:
             check="$(printf '%s' "${check}" | xargs)"
             [ -z "${check}" ] && continue
             case "${check}" in
-              full|schema|tests|targeted|lint|security|restore) ;;
+              full|schema|tests|system-tests|targeted|lint|security|restore) ;;
               *) echo "Unsupported check: ${check}"; exit 1 ;;
             esac
             printf '%s\n' "${check}" >> "${normalized_checks}"
@@ -102,10 +125,25 @@ jobs:
           [ -s "${normalized_checks}" ] || { echo "At least one check is required."; exit 1; }
 
           if grep -qx full "${normalized_checks}"; then
-            [ "$(wc -l < "${normalized_checks}")" -eq 1 ] || { echo "The full preset cannot be combined with individual checks."; exit 1; }
-            printf '%s\n' schema tests lint security restore > "${normalized_checks}"
+            [ "$(wc -l < "${normalized_checks}")" -eq 1 ] || {
+              echo "The full preset cannot be combined with individual checks."
+              exit 1
+            }
+            if [ "${project}" = "pashamcrafts" ]; then
+              printf '%s\n' schema tests lint security restore > "${normalized_checks}"
+            else
+              printf '%s\n' schema tests system-tests lint security > "${normalized_checks}"
+            fi
           fi
 
+          if [ "${project}" = "pashamcrafts" ] && grep -qx system-tests "${normalized_checks}"; then
+            echo "system-tests is not configured for PashamCrafts."
+            exit 1
+          fi
+          if [ "${project}" = "taleemi_idara" ] && grep -qx restore "${normalized_checks}"; then
+            echo "restore is not configured for Taleemi Idara."
+            exit 1
+          fi
           if grep -qx tests "${normalized_checks}" && grep -qx targeted "${normalized_checks}"; then
             echo "Complete and targeted tests cannot be requested together."
             exit 1
@@ -116,17 +154,27 @@ jobs:
           while IFS= read -r spec; do
             spec="$(printf '%s' "${spec}" | xargs)"
             [ -z "${spec}" ] && continue
-            [[ "${spec}" =~ ^spec/[A-Za-z0-9_./-]+(:[0-9]+)?$ ]] || { echo "Invalid targeted spec reference."; exit 1; }
+            if [ "${project}" = "pashamcrafts" ]; then
+              [[ "${spec}" =~ ^spec/[A-Za-z0-9_./-]+(_spec\.rb)?(:[0-9]+)?$ ]] || {
+                echo "Invalid PashamCrafts targeted test reference."
+                exit 1
+              }
+            else
+              [[ "${spec}" =~ ^test/[A-Za-z0-9_./-]+_test\.rb(:[0-9]+)?$ ]] || {
+                echo "Invalid Taleemi Idara targeted test reference."
+                exit 1
+              }
+            fi
             printf '%s\n' "${spec}" >> "${normalized_specs}"
           done < "${specs_file}"
           sort -u -o "${normalized_specs}" "${normalized_specs}"
 
           spec_count="$(wc -l < "${normalized_specs}")"
           if grep -qx targeted "${normalized_checks}"; then
-            [ "${spec_count}" -gt 0 ] || { echo "Targeted checks require at least one spec."; exit 1; }
-            [ "${spec_count}" -le 25 ] || { echo "Targeted checks accept at most 25 specs."; exit 1; }
+            [ "${spec_count}" -gt 0 ] || { echo "Targeted checks require at least one test path."; exit 1; }
+            [ "${spec_count}" -le 25 ] || { echo "Targeted checks accept at most 25 test paths."; exit 1; }
           elif [ "${spec_count}" -gt 0 ]; then
-            echo "Spec references are accepted only with the targeted check."
+            echo "Test paths are accepted only with the targeted check."
             exit 1
           fi
 
@@ -138,15 +186,31 @@ jobs:
 
           run_schema="$(bool requested schema)"
           run_tests="$(bool requested tests)"
+          run_system_tests="$(bool requested system-tests)"
           run_targeted="$(bool requested targeted)"
           run_restore="$(bool requested restore)"
           run_lint="$(bool requested lint)"
           run_security="$(bool requested security)"
 
-          if [ "${run_schema}" = true ] || [ "${run_tests}" = true ] || [ "${run_targeted}" = true ] || [ "${run_restore}" = true ]; then run_db=true; else run_db=false; fi
-          if [ "${run_lint}" = true ] || [ "${run_security}" = true ]; then run_static=true; else run_static=false; fi
+          if [ "${run_schema}" = true ] ||
+             [ "${run_tests}" = true ] ||
+             [ "${run_system_tests}" = true ] ||
+             [ "${run_targeted}" = true ] ||
+             [ "${run_restore}" = true ]; then
+            run_db=true
+          else
+            run_db=false
+          fi
+
+          if [ "${run_lint}" = true ] || [ "${run_security}" = true ]; then
+            run_static=true
+          else
+            run_static=false
+          fi
 
           {
+            echo "project=${project}"
+            echo "status_prefix=${status_prefix}"
             echo "request_id=${request_id}"
             echo "target_sha=${target_sha}"
             echo "checks_json=${checks_json}"
@@ -154,6 +218,7 @@ jobs:
             echo "run_db=${run_db}"
             echo "run_schema=${run_schema}"
             echo "run_tests=${run_tests}"
+            echo "run_system_tests=${run_system_tests}"
             echo "run_targeted=${run_targeted}"
             echo "run_restore=${run_restore}"
             echo "run_static=${run_static}"
@@ -161,7 +226,7 @@ jobs:
             echo "run_security=${run_security}"
           } >> "${GITHUB_OUTPUT}"
 
-          echo "Approved ${request_id} for ${target_sha:0:12}: $(paste -sd, "${normalized_checks}")."
+          echo "Approved ${project}/${request_id} for ${target_sha:0:12}: $(paste -sd, "${normalized_checks}")."
 
   db_checks:
     name: Database-backed checks
@@ -169,10 +234,12 @@ jobs:
     if: needs.resolve.outputs.run_db == 'true'
     uses: ./.github/workflows/shared-db-checks.yml
     with:
+      project: ${{ needs.resolve.outputs.project }}
       request_id: ${{ needs.resolve.outputs.request_id }}
       target_sha: ${{ needs.resolve.outputs.target_sha }}
       run_schema: ${{ needs.resolve.outputs.run_schema == 'true' }}
       run_tests: ${{ needs.resolve.outputs.run_tests == 'true' }}
+      run_system_tests: ${{ needs.resolve.outputs.run_system_tests == 'true' }}
       run_targeted: ${{ needs.resolve.outputs.run_targeted == 'true' }}
       run_restore: ${{ needs.resolve.outputs.run_restore == 'true' }}
       specs_json: ${{ needs.resolve.outputs.specs_json }}
@@ -184,6 +251,7 @@ jobs:
     if: needs.resolve.outputs.run_static == 'true'
     uses: ./.github/workflows/shared-static-checks.yml
     with:
+      project: ${{ needs.resolve.outputs.project }}
       request_id: ${{ needs.resolve.outputs.request_id }}
       target_sha: ${{ needs.resolve.outputs.target_sha }}
       run_lint: ${{ needs.resolve.outputs.run_lint == 'true' }}
@@ -202,6 +270,8 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          PROJECT: ${{ needs.resolve.outputs.project }}
+          STATUS_PREFIX: ${{ needs.resolve.outputs.status_prefix }}
           REQUEST_ID: ${{ needs.resolve.outputs.request_id }}
           TARGET_SHA: ${{ needs.resolve.outputs.target_sha }}
           CHECKS_JSON: ${{ needs.resolve.outputs.checks_json }}
@@ -210,6 +280,7 @@ jobs:
           STATIC_JOB: ${{ needs.static_checks.result }}
           SCHEMA_RESULT: ${{ needs.db_checks.outputs.schema_result }}
           TESTS_RESULT: ${{ needs.db_checks.outputs.tests_result }}
+          SYSTEM_TESTS_RESULT: ${{ needs.db_checks.outputs.system_tests_result }}
           TARGETED_RESULT: ${{ needs.db_checks.outputs.targeted_result }}
           RESTORE_RESULT: ${{ needs.db_checks.outputs.restore_result }}
           LINT_RESULT: ${{ needs.static_checks.outputs.lint_result }}
@@ -219,14 +290,20 @@ jobs:
           overall=success
 
           publish() {
-            local check="$1" result="$2" state description payload
+            local check="$1" result="$2" state description payload prefix
             case "${result}" in
               success) state=success ;;
               failure) state=failure; overall=failure ;;
               *) state=error; overall=failure ;;
             esac
-            description="${check} ${result} for ${TARGET_SHA:0:12}"
-            payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts/${check}" --arg description "${description}" --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            prefix="${STATUS_PREFIX:-validator}"
+            description="${PROJECT:-unresolved} ${check} ${result} for ${TARGET_SHA:0:12}"
+            payload="$(jq -n \
+              --arg state "${state}" \
+              --arg context "${prefix}/${check}" \
+              --arg description "${description}" \
+              --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{state: $state, context: $context, description: $description, target_url: $target_url}')"
             curl --fail-with-body --silent --show-error --request POST \
               --header "Authorization: Bearer ${GH_TOKEN}" \
               --header "Accept: application/vnd.github+json" \
@@ -243,6 +320,7 @@ jobs:
               case "${check}" in
                 schema) publish schema "${SCHEMA_RESULT:-error}" ;;
                 tests) publish tests "${TESTS_RESULT:-error}" ;;
+                system-tests) publish system-tests "${SYSTEM_TESTS_RESULT:-error}" ;;
                 targeted) publish targeted "${TARGETED_RESULT:-error}" ;;
                 restore) publish restore "${RESTORE_RESULT:-error}" ;;
                 lint) publish lint "${LINT_RESULT:-error}" ;;
@@ -253,8 +331,9 @@ jobs:
           fi
 
           {
-            echo "## PashamCrafts explicit verification"
+            echo "## Explicit private-project verification"
             echo
+            echo "Project: \`${PROJECT:-unresolved}\`"
             echo "Request: \`${REQUEST_ID:-unresolved}\`"
             echo "Target: \`${TARGET_SHA:-unresolved}\`"
             echo "Checks: \`${CHECKS_JSON:-[]}\`"
