@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-81-admin-targeted-c95d3b30",
-  "target_sha": "c95d3b30915fd31040e70b1148742b2344804f98",
+  "request_id": "issue-81-final-endpoints-cf8f951e",
+  "target_sha": "cf8f951e81bc2672531ca13befa0da3517dbbf75",
   "checks": ["targeted"],
   "specs": [
     "spec/services/after_sales/defensive_guards_spec.rb",
