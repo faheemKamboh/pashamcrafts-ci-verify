@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-80-job-safeguards-86ea063",
-  "target_sha": "86ea0635935ecb007d54860c4c7b388edea49ffd",
+  "request_id": "issue-80-final-targeted-63595b9",
+  "target_sha": "63595b9c241b3dec491af85e2de43bd4c2f99ec2",
   "checks": ["targeted"],
   "specs": [
     "spec/jobs/shipping/complete_delivered_order_job_spec.rb",
