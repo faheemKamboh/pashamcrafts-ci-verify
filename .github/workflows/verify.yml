@@ -23,6 +23,19 @@ on:
         description: Comma- or newline-separated test paths when targeted is requested
         required: false
         type: string
+    secrets:
+      PASHAMCRAFTS_READ_TOKEN:
+        required: false
+      TALEEMI_IDARA_READ_TOKEN:
+        required: false
+      GREENSVILLA_READ_TOKEN:
+        required: false
+      PASHAMCRAFTS_STATUS_TOKEN:
+        required: false
+      TALEEMI_IDARA_STATUS_TOKEN:
+        required: false
+      GREENSVILLA_STATUS_TOKEN:
+        required: false
   workflow_dispatch:
     inputs:
       project:
