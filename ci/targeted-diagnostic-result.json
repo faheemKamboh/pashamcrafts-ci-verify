@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-defensive-coverage-d818f81",
-  "target_sha": "d818f819328cc51e66bf1926cd9d4ac052fda4c9",
-  "detail": "31 examples, 0 failures; no failure detail"
+  "request_id": "issue-80-final-shipping-targeted-fc1e55c",
+  "target_sha": "fc1e55c735b6cc9bf458b7d594091ff151e58079",
+  "detail": "62 examples, 0 failures; no failure detail"
 }
