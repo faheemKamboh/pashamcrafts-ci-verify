@@ -1,0 +1,36 @@
+name: Validate verifier workflows
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "ci/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "ci/**"
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout verifier configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate workflow syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "${PWD}:/repo" \
+            -w /repo \
+            rhysd/actionlint:1.7.7
