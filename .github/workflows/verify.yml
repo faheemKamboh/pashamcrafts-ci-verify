@@ -10,6 +10,7 @@ on:
         options:
           - pashamcrafts
           - taleemi_idara
+          - greensvilla
       request_id:
         description: Unique request identifier
         required: false
@@ -52,9 +53,12 @@ jobs:
       run_system_tests: ${{ steps.request.outputs.run_system_tests }}
       run_targeted: ${{ steps.request.outputs.run_targeted }}
       run_restore: ${{ steps.request.outputs.run_restore }}
+      run_seeds: ${{ steps.request.outputs.run_seeds }}
       run_static: ${{ steps.request.outputs.run_static }}
       run_lint: ${{ steps.request.outputs.run_lint }}
       run_security: ${{ steps.request.outputs.run_security }}
+      run_assets: ${{ steps.request.outputs.run_assets }}
+      run_docker: ${{ steps.request.outputs.run_docker }}
     steps:
       - name: Checkout verification configuration
         uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
@@ -100,14 +104,23 @@ jobs:
             taleemi_idara)
               status_prefix="taleemi-idara"
               ;;
+            greensvilla)
+              status_prefix="greensvilla"
+              ;;
             *)
               echo "Unsupported project."
               exit 1
               ;;
           esac
 
-          [[ "${request_id}" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || { echo "Invalid request identifier."; exit 1; }
-          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid target SHA."; exit 1; }
+          [[ "${request_id}" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || {
+            echo "Invalid request identifier."
+            exit 1
+          }
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid target SHA."
+            exit 1
+          }
 
           normalized_checks="${RUNNER_TEMP}/normalized-checks.txt"
           : > "${normalized_checks}"
@@ -115,35 +128,61 @@ jobs:
             check="$(printf '%s' "${check}" | xargs)"
             [ -z "${check}" ] && continue
             case "${check}" in
-              full|schema|tests|system-tests|targeted|lint|security|restore) ;;
+              full|schema|tests|system-tests|targeted|lint|security|restore|assets|docker|seeds) ;;
               *) echo "Unsupported check: ${check}"; exit 1 ;;
             esac
             printf '%s\n' "${check}" >> "${normalized_checks}"
           done < "${checks_file}"
           sort -u -o "${normalized_checks}" "${normalized_checks}"
 
-          [ -s "${normalized_checks}" ] || { echo "At least one check is required."; exit 1; }
+          [ -s "${normalized_checks}" ] || {
+            echo "At least one check is required."
+            exit 1
+          }
 
           if grep -qx full "${normalized_checks}"; then
             [ "$(wc -l < "${normalized_checks}")" -eq 1 ] || {
               echo "The full preset cannot be combined with individual checks."
               exit 1
             }
-            if [ "${project}" = "pashamcrafts" ]; then
-              printf '%s\n' schema tests lint security restore > "${normalized_checks}"
-            else
-              printf '%s\n' schema tests system-tests lint security > "${normalized_checks}"
-            fi
+            case "${project}" in
+              pashamcrafts)
+                printf '%s\n' schema tests lint security restore > "${normalized_checks}"
+                ;;
+              taleemi_idara)
+                printf '%s\n' schema tests system-tests lint security > "${normalized_checks}"
+                ;;
+              greensvilla)
+                printf '%s\n' tests system-tests lint security assets docker seeds > "${normalized_checks}"
+                ;;
+            esac
           fi
 
-          if [ "${project}" = "pashamcrafts" ] && grep -qx system-tests "${normalized_checks}"; then
-            echo "system-tests is not configured for PashamCrafts."
-            exit 1
-          fi
-          if [ "${project}" = "taleemi_idara" ] && grep -qx restore "${normalized_checks}"; then
-            echo "restore is not configured for Taleemi Idara."
-            exit 1
-          fi
+          case "${project}" in
+            pashamcrafts)
+              for unsupported in system-tests assets docker seeds; do
+                ! grep -qx "${unsupported}" "${normalized_checks}" || {
+                  echo "${unsupported} is not configured for PashamCrafts."
+                  exit 1
+                }
+              done
+              ;;
+            taleemi_idara)
+              for unsupported in restore assets docker seeds; do
+                ! grep -qx "${unsupported}" "${normalized_checks}" || {
+                  echo "${unsupported} is not configured for Taleemi Idara."
+                  exit 1
+                }
+              done
+              ;;
+            greensvilla)
+              ! grep -qx restore "${normalized_checks}" || {
+                echo "restore is not configured for GreensVilla."
+                exit 1
+              }
+              ;;
+          esac
+
           if grep -qx tests "${normalized_checks}" && grep -qx targeted "${normalized_checks}"; then
             echo "Complete and targeted tests cannot be requested together."
             exit 1
@@ -154,14 +193,14 @@ jobs:
           while IFS= read -r spec; do
             spec="$(printf '%s' "${spec}" | xargs)"
             [ -z "${spec}" ] && continue
-            if [ "${project}" = "pashamcrafts" ]; then
-              [[ "${spec}" =~ ^spec/[A-Za-z0-9_./-]+(_spec\.rb)?(:[0-9]+)?$ ]] || {
-                echo "Invalid PashamCrafts targeted test reference."
+            if [ "${project}" = "taleemi_idara" ]; then
+              [[ "${spec}" =~ ^test/[A-Za-z0-9_./-]+_test\.rb(:[0-9]+)?$ ]] || {
+                echo "Invalid Taleemi Idara targeted test reference."
                 exit 1
               }
             else
-              [[ "${spec}" =~ ^test/[A-Za-z0-9_./-]+_test\.rb(:[0-9]+)?$ ]] || {
-                echo "Invalid Taleemi Idara targeted test reference."
+              [[ "${spec}" =~ ^spec/[A-Za-z0-9_./-]+_spec\.rb(:[0-9]+)?$ ]] || {
+                echo "Invalid RSpec targeted test reference."
                 exit 1
               }
             fi
@@ -171,8 +210,14 @@ jobs:
 
           spec_count="$(wc -l < "${normalized_specs}")"
           if grep -qx targeted "${normalized_checks}"; then
-            [ "${spec_count}" -gt 0 ] || { echo "Targeted checks require at least one test path."; exit 1; }
-            [ "${spec_count}" -le 25 ] || { echo "Targeted checks accept at most 25 test paths."; exit 1; }
+            [ "${spec_count}" -gt 0 ] || {
+              echo "Targeted checks require at least one test path."
+              exit 1
+            }
+            [ "${spec_count}" -le 25 ] || {
+              echo "Targeted checks accept at most 25 test paths."
+              exit 1
+            }
           elif [ "${spec_count}" -gt 0 ]; then
             echo "Test paths are accepted only with the targeted check."
             exit 1
@@ -189,20 +234,27 @@ jobs:
           run_system_tests="$(bool requested system-tests)"
           run_targeted="$(bool requested targeted)"
           run_restore="$(bool requested restore)"
+          run_seeds="$(bool requested seeds)"
           run_lint="$(bool requested lint)"
           run_security="$(bool requested security)"
+          run_assets="$(bool requested assets)"
+          run_docker="$(bool requested docker)"
 
           if [ "${run_schema}" = true ] ||
              [ "${run_tests}" = true ] ||
              [ "${run_system_tests}" = true ] ||
              [ "${run_targeted}" = true ] ||
-             [ "${run_restore}" = true ]; then
+             [ "${run_restore}" = true ] ||
+             [ "${run_seeds}" = true ]; then
             run_db=true
           else
             run_db=false
           fi
 
-          if [ "${run_lint}" = true ] || [ "${run_security}" = true ]; then
+          if [ "${run_lint}" = true ] ||
+             [ "${run_security}" = true ] ||
+             [ "${run_assets}" = true ] ||
+             [ "${run_docker}" = true ]; then
             run_static=true
           else
             run_static=false
@@ -221,9 +273,12 @@ jobs:
             echo "run_system_tests=${run_system_tests}"
             echo "run_targeted=${run_targeted}"
             echo "run_restore=${run_restore}"
+            echo "run_seeds=${run_seeds}"
             echo "run_static=${run_static}"
             echo "run_lint=${run_lint}"
             echo "run_security=${run_security}"
+            echo "run_assets=${run_assets}"
+            echo "run_docker=${run_docker}"
           } >> "${GITHUB_OUTPUT}"
 
           echo "Approved ${project}/${request_id} for ${target_sha:0:12}: $(paste -sd, "${normalized_checks}")."
@@ -242,11 +297,12 @@ jobs:
       run_system_tests: ${{ needs.resolve.outputs.run_system_tests == 'true' }}
       run_targeted: ${{ needs.resolve.outputs.run_targeted == 'true' }}
       run_restore: ${{ needs.resolve.outputs.run_restore == 'true' }}
+      run_seeds: ${{ needs.resolve.outputs.run_seeds == 'true' }}
       specs_json: ${{ needs.resolve.outputs.specs_json }}
     secrets: inherit
 
   static_checks:
-    name: Static checks
+    name: Static and release checks
     needs: resolve
     if: needs.resolve.outputs.run_static == 'true'
     uses: ./.github/workflows/shared-static-checks.yml
@@ -256,6 +312,8 @@ jobs:
       target_sha: ${{ needs.resolve.outputs.target_sha }}
       run_lint: ${{ needs.resolve.outputs.run_lint == 'true' }}
       run_security: ${{ needs.resolve.outputs.run_security == 'true' }}
+      run_assets: ${{ needs.resolve.outputs.run_assets == 'true' }}
+      run_docker: ${{ needs.resolve.outputs.run_docker == 'true' }}
     secrets: inherit
 
   report:
@@ -283,8 +341,11 @@ jobs:
           SYSTEM_TESTS_RESULT: ${{ needs.db_checks.outputs.system_tests_result }}
           TARGETED_RESULT: ${{ needs.db_checks.outputs.targeted_result }}
           RESTORE_RESULT: ${{ needs.db_checks.outputs.restore_result }}
+          SEEDS_RESULT: ${{ needs.db_checks.outputs.seeds_result }}
           LINT_RESULT: ${{ needs.static_checks.outputs.lint_result }}
           SECURITY_RESULT: ${{ needs.static_checks.outputs.security_result }}
+          ASSETS_RESULT: ${{ needs.static_checks.outputs.assets_result }}
+          DOCKER_RESULT: ${{ needs.static_checks.outputs.docker_result }}
         run: |
           set -euo pipefail
           overall=success
@@ -323,8 +384,11 @@ jobs:
                 system-tests) publish system-tests "${SYSTEM_TESTS_RESULT:-error}" ;;
                 targeted) publish targeted "${TARGETED_RESULT:-error}" ;;
                 restore) publish restore "${RESTORE_RESULT:-error}" ;;
+                seeds) publish seeds "${SEEDS_RESULT:-error}" ;;
                 lint) publish lint "${LINT_RESULT:-error}" ;;
                 security) publish security "${SECURITY_RESULT:-error}" ;;
+                assets) publish assets "${ASSETS_RESULT:-error}" ;;
+                docker) publish docker "${DOCKER_RESULT:-error}" ;;
                 *) publish request failure ;;
               esac
             done < <(jq -r '.[]' <<< "${CHECKS_JSON}")
@@ -340,7 +404,7 @@ jobs:
             echo "Result: **${overall}**"
             echo
             echo "Database workflow: \`${DB_JOB}\`"
-            echo "Static workflow: \`${STATIC_JOB}\`"
+            echo "Static/release workflow: \`${STATIC_JOB}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
           test "${overall}" = success

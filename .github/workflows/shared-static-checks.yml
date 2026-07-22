@@ -20,10 +20,20 @@ on:
         required: false
         default: false
         type: boolean
+      run_assets:
+        required: false
+        default: false
+        type: boolean
+      run_docker:
+        required: false
+        default: false
+        type: boolean
     secrets:
       PASHAMCRAFTS_READ_TOKEN:
         required: false
       TALEEMI_IDARA_READ_TOKEN:
+        required: false
+      GREENSVILLA_READ_TOKEN:
         required: false
     outputs:
       result:
@@ -32,19 +42,25 @@ on:
         value: ${{ jobs.checks.outputs.lint_result }}
       security_result:
         value: ${{ jobs.checks.outputs.security_result }}
+      assets_result:
+        value: ${{ jobs.checks.outputs.assets_result }}
+      docker_result:
+        value: ${{ jobs.checks.outputs.docker_result }}
 
 permissions:
   contents: read
 
 jobs:
   checks:
-    name: Rails static checks
+    name: Rails static and release checks
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 75
     outputs:
       result: ${{ steps.collect.outputs.result }}
       lint_result: ${{ steps.collect.outputs.lint_result }}
       security_result: ${{ steps.collect.outputs.security_result }}
+      assets_result: ${{ steps.collect.outputs.assets_result }}
+      docker_result: ${{ steps.collect.outputs.docker_result }}
 
     steps:
       - name: Checkout verification configuration
@@ -59,6 +75,7 @@ jobs:
           PROJECT: ${{ inputs.project }}
           PASHAMCRAFTS_TOKEN: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
           TALEEMI_IDARA_TOKEN: ${{ secrets.TALEEMI_IDARA_READ_TOKEN }}
+          GREENSVILLA_TOKEN: ${{ secrets.GREENSVILLA_READ_TOKEN }}
         run: |
           set -euo pipefail
           case "${PROJECT}" in
@@ -67,6 +84,9 @@ jobs:
               ;;
             taleemi_idara)
               [ -n "${TALEEMI_IDARA_TOKEN}" ] || { echo "TALEEMI_IDARA_READ_TOKEN is not configured."; exit 1; }
+              ;;
+            greensvilla)
+              [ -n "${GREENSVILLA_TOKEN}" ] || { echo "GREENSVILLA_READ_TOKEN is not configured."; exit 1; }
               ;;
             *)
               echo "Unsupported project."
@@ -96,14 +116,47 @@ jobs:
           fetch-depth: 1
           path: app
 
+      - name: Checkout exact GreensVilla commit
+        if: inputs.project == 'greensvilla'
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: GreensVilla/greensvilla
+          ref: ${{ inputs.target_sha }}
+          token: ${{ secrets.GREENSVILLA_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
       - name: Confirm exact checkout
         run: test "$(git -C app rev-parse HEAD)" = "${{ inputs.target_sha }}"
 
       - name: Set up Ruby and gems
+        if: inputs.run_lint || inputs.run_security || inputs.run_assets
         uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
         with:
           bundler-cache: true
           working-directory: app
+
+      - name: Set up Node.js for GreensVilla
+        if: inputs.project == 'greensvilla' && (inputs.run_security || inputs.run_assets)
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.10.0
+
+      - name: Install locked GreensVilla JavaScript dependencies
+        id: javascript
+        if: inputs.project == 'greensvilla' && (inputs.run_security || inputs.run_assets)
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          bin/yarn install --immutable > "${RUNNER_TEMP}/yarn-install.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "JavaScript dependencies: ${result^^}"
+          exit "${status}"
 
       - name: Run RuboCop
         id: lint
@@ -111,9 +164,15 @@ jobs:
         continue-on-error: true
         working-directory: app
         shell: bash
+        env:
+          PROJECT: ${{ inputs.project }}
         run: |
           set +e
-          bin/rubocop --format progress > "${RUNNER_TEMP}/rubocop.log" 2>&1
+          if [ "${PROJECT}" = "greensvilla" ]; then
+            bin/rubocop > "${RUNNER_TEMP}/rubocop.log" 2>&1
+          else
+            bin/rubocop --format progress > "${RUNNER_TEMP}/rubocop.log" 2>&1
+          fi
           status=$?
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
@@ -130,62 +189,147 @@ jobs:
           PROJECT: ${{ inputs.project }}
         run: |
           set +e
-          if [ "${PROJECT}" = "pashamcrafts" ]; then
-            bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error \
-              -f json -o "${RUNNER_TEMP}/brakeman.json" \
-              > "${RUNNER_TEMP}/brakeman.log" 2>&1
-            security_status=$?
-          else
-            bin/brakeman --no-pager > "${RUNNER_TEMP}/brakeman.log" 2>&1
-            brakeman_status=$?
-            bin/bundler-audit > "${RUNNER_TEMP}/bundler-audit.log" 2>&1
-            audit_status=$?
-            if [ "${brakeman_status}" -eq 0 ] && [ "${audit_status}" -eq 0 ]; then
-              security_status=0
-            else
-              security_status=1
-            fi
-          fi
-
+          case "${PROJECT}" in
+            pashamcrafts)
+              bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error \
+                -f json -o "${RUNNER_TEMP}/brakeman.json" \
+                > "${RUNNER_TEMP}/brakeman.log" 2>&1
+              security_status=$?
+              ;;
+            taleemi_idara)
+              bin/brakeman --no-pager > "${RUNNER_TEMP}/brakeman.log" 2>&1
+              brakeman_status=$?
+              bin/bundler-audit > "${RUNNER_TEMP}/bundler-audit.log" 2>&1
+              audit_status=$?
+              if [ "${brakeman_status}" -eq 0 ] && [ "${audit_status}" -eq 0 ]; then security_status=0; else security_status=1; fi
+              ;;
+            greensvilla)
+              if [ "${{ steps.javascript.outputs.result }}" != "success" ]; then
+                echo "JavaScript dependency installation failed." > "${RUNNER_TEMP}/yarn-audit.log"
+                javascript_status=1
+              else
+                bin/yarn npm audit --all --recursive > "${RUNNER_TEMP}/yarn-audit.log" 2>&1
+                javascript_status=$?
+              fi
+              bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error > "${RUNNER_TEMP}/brakeman.log" 2>&1
+              brakeman_status=$?
+              bin/bundler-audit --update > "${RUNNER_TEMP}/bundler-audit.log" 2>&1
+              audit_status=$?
+              if [ "${brakeman_status}" -eq 0 ] && [ "${audit_status}" -eq 0 ] && [ "${javascript_status}" -eq 0 ]; then security_status=0; else security_status=1; fi
+              echo "GreensVilla JavaScript audit: $([ "${javascript_status}" -eq 0 ] && echo SUCCESS || echo FAILURE)"
+              ;;
+          esac
           result=$([ "${security_status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "Security: ${result^^}"
           exit "${security_status}"
 
-      - name: Collect static results
+      - name: Build and verify GreensVilla release assets
+        id: assets
+        if: inputs.run_assets
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        env:
+          ACTIVE_STORAGE_SERVICE: local
+          RAILS_ENV: production
+          SECRET_KEY_BASE_DUMMY: "1"
+        run: |
+          set +e
+          if [ "${{ inputs.project }}" != "greensvilla" ]; then
+            echo "Assets are not configured for this project." > "${RUNNER_TEMP}/assets.log"
+            status=1
+          elif [ "${{ steps.javascript.outputs.result }}" != "success" ]; then
+            echo "JavaScript dependency installation failed." > "${RUNNER_TEMP}/assets.log"
+            status=1
+          else
+            {
+              bin/yarn build &&
+              bin/yarn build:css &&
+              bin/rails tailwindcss:build &&
+              test -s app/assets/builds/application.js &&
+              test -s app/assets/builds/application.css &&
+              test -s app/assets/builds/tailwind.css &&
+              SKIP_CSS_BUILD=1 SKIP_JS_BUILD=1 bin/rails assets:precompile &&
+              test -n "$(find public/assets -type f -name 'application-*.js' -size +0c -print -quit)" &&
+              test -n "$(find public/assets -type f -name 'application-*.css' -size +0c -print -quit)" &&
+              test -n "$(find public/assets -type f -name 'tailwind-*.css' -size +0c -print -quit)"
+            } > "${RUNNER_TEMP}/assets.log" 2>&1
+            status=$?
+          fi
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Assets: ${result^^}"
+          exit "${status}"
+
+      - name: Build and verify GreensVilla production image
+        id: docker
+        if: inputs.run_docker
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          if [ "${{ inputs.project }}" != "greensvilla" ]; then
+            echo "Docker validation is not configured for this project." > "${RUNNER_TEMP}/docker.log"
+            status=1
+          else
+            image="greensvilla-ci:${{ inputs.target_sha }}"
+            {
+              docker build --pull --tag "${image}" . &&
+              docker image inspect "${image}" > /dev/null
+            } > "${RUNNER_TEMP}/docker.log" 2>&1
+            status=$?
+          fi
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Docker image: ${result^^}"
+          exit "${status}"
+
+      - name: Collect static and release results
         id: collect
         if: always()
         shell: bash
         env:
           LINT_RESULT: ${{ steps.lint.outputs.result }}
           SECURITY_RESULT: ${{ steps.security.outputs.result }}
+          ASSETS_RESULT: ${{ steps.assets.outputs.result }}
+          DOCKER_RESULT: ${{ steps.docker.outputs.result }}
         run: |
           set -euo pipefail
           lint="${LINT_RESULT:-skipped}"
           security="${SECURITY_RESULT:-skipped}"
+          assets="${ASSETS_RESULT:-skipped}"
+          docker="${DOCKER_RESULT:-skipped}"
           result=success
-
           [ "${{ inputs.run_lint }}" = false ] || [ "${lint}" = success ] || result=failure
           [ "${{ inputs.run_security }}" = false ] || [ "${security}" = success ] || result=failure
-
+          [ "${{ inputs.run_assets }}" = false ] || [ "${assets}" = success ] || result=failure
+          [ "${{ inputs.run_docker }}" = false ] || [ "${docker}" = success ] || result=failure
           {
             echo "result=${result}"
             echo "lint_result=${lint}"
             echo "security_result=${security}"
+            echo "assets_result=${assets}"
+            echo "docker_result=${docker}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Encrypt static diagnostics
+      - name: Encrypt static and release diagnostics
         if: always() && steps.collect.outputs.result != 'success'
         shell: bash
         run: |
           bash ci/encrypt-diagnostics.sh \
             "${RUNNER_TEMP}/encrypted-static-diagnostics" \
+            "${RUNNER_TEMP}/yarn-install.log" \
             "${RUNNER_TEMP}/rubocop.log" \
             "${RUNNER_TEMP}/brakeman.log" \
             "${RUNNER_TEMP}/brakeman.json" \
-            "${RUNNER_TEMP}/bundler-audit.log"
+            "${RUNNER_TEMP}/bundler-audit.log" \
+            "${RUNNER_TEMP}/yarn-audit.log" \
+            "${RUNNER_TEMP}/assets.log" \
+            "${RUNNER_TEMP}/docker.log"
 
-      - name: Upload encrypted static diagnostics
+      - name: Upload encrypted static and release diagnostics
         if: always() && steps.collect.outputs.result != 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:

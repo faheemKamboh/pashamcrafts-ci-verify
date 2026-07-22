@@ -1,0 +1,64 @@
+name: Validate verifier workflows
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/shared-db-checks.yml"
+      - ".github/workflows/shared-static-checks.yml"
+      - ".github/workflows/verify.yml"
+      - ".github/workflows/validator-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/shared-db-checks.yml"
+      - ".github/workflows/shared-static-checks.yml"
+      - ".github/workflows/verify.yml"
+      - ".github/workflows/validator-lint.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout verifier configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Validate workflow syntax
+        id: actionlint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          docker run --rm \
+            -v "${PWD}:/repo" \
+            -w /repo \
+            rhysd/actionlint:1.7.7 \
+            .github/workflows/shared-db-checks.yml \
+            .github/workflows/shared-static-checks.yml \
+            .github/workflows/verify.yml \
+            .github/workflows/validator-lint.yml \
+            > "${RUNNER_TEMP}/actionlint.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          exit "${status}"
+
+      - name: Upload workflow diagnostics
+        if: steps.actionlint.outputs.result != 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: actionlint-diagnostics
+          path: ${{ runner.temp }}/actionlint.log
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Enforce workflow validation
+        run: test "${{ steps.actionlint.outputs.result }}" = success

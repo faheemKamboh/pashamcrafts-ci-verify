@@ -32,6 +32,10 @@ on:
         required: false
         default: false
         type: boolean
+      run_seeds:
+        required: false
+        default: false
+        type: boolean
       specs_json:
         required: false
         default: "[]"
@@ -40,6 +44,8 @@ on:
       PASHAMCRAFTS_READ_TOKEN:
         required: false
       TALEEMI_IDARA_READ_TOKEN:
+        required: false
+      GREENSVILLA_READ_TOKEN:
         required: false
     outputs:
       result:
@@ -54,6 +60,8 @@ on:
         value: ${{ jobs.checks.outputs.targeted_result }}
       restore_result:
         value: ${{ jobs.checks.outputs.restore_result }}
+      seeds_result:
+        value: ${{ jobs.checks.outputs.seeds_result }}
 
 permissions:
   contents: read
@@ -62,7 +70,7 @@ jobs:
   checks:
     name: Rails database checks
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     outputs:
       result: ${{ steps.collect.outputs.result }}
       schema_result: ${{ steps.collect.outputs.schema_result }}
@@ -70,6 +78,7 @@ jobs:
       system_tests_result: ${{ steps.collect.outputs.system_tests_result }}
       targeted_result: ${{ steps.collect.outputs.targeted_result }}
       restore_result: ${{ steps.collect.outputs.restore_result }}
+      seeds_result: ${{ steps.collect.outputs.seeds_result }}
 
     services:
       postgres:
@@ -86,7 +95,6 @@ jobs:
 
     env:
       RAILS_ENV: test
-      DATABASE_URL: postgres://postgres:password@localhost/private_project_test
 
     steps:
       - name: Checkout verification configuration
@@ -101,14 +109,27 @@ jobs:
           PROJECT: ${{ inputs.project }}
           PASHAMCRAFTS_TOKEN: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
           TALEEMI_IDARA_TOKEN: ${{ secrets.TALEEMI_IDARA_READ_TOKEN }}
+          GREENSVILLA_TOKEN: ${{ secrets.GREENSVILLA_READ_TOKEN }}
         run: |
           set -euo pipefail
           case "${PROJECT}" in
             pashamcrafts)
-              [ -n "${PASHAMCRAFTS_TOKEN}" ] || { echo "PASHAMCRAFTS_READ_TOKEN is not configured."; exit 1; }
+              [ -n "${PASHAMCRAFTS_TOKEN}" ] || {
+                echo "PASHAMCRAFTS_READ_TOKEN is not configured."
+                exit 1
+              }
               ;;
             taleemi_idara)
-              [ -n "${TALEEMI_IDARA_TOKEN}" ] || { echo "TALEEMI_IDARA_READ_TOKEN is not configured."; exit 1; }
+              [ -n "${TALEEMI_IDARA_TOKEN}" ] || {
+                echo "TALEEMI_IDARA_READ_TOKEN is not configured."
+                exit 1
+              }
+              ;;
+            greensvilla)
+              [ -n "${GREENSVILLA_TOKEN}" ] || {
+                echo "GREENSVILLA_READ_TOKEN is not configured."
+                exit 1
+              }
               ;;
             *)
               echo "Unsupported project."
@@ -138,8 +159,33 @@ jobs:
           fetch-depth: 1
           path: app
 
+      - name: Checkout exact GreensVilla commit
+        if: inputs.project == 'greensvilla'
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: GreensVilla/greensvilla
+          ref: ${{ inputs.target_sha }}
+          token: ${{ secrets.GREENSVILLA_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
       - name: Confirm exact checkout
         run: test "$(git -C app rev-parse HEAD)" = "${{ inputs.target_sha }}"
+
+      - name: Configure project database
+        shell: bash
+        env:
+          PROJECT: ${{ inputs.project }}
+        run: |
+          set -euo pipefail
+          case "${PROJECT}" in
+            pashamcrafts) database_name="pashamcrafts_test" ;;
+            taleemi_idara) database_name="taleemi_idara_test" ;;
+            greensvilla) database_name="greensvilla_test" ;;
+            *) echo "Unsupported project."; exit 1 ;;
+          esac
+          echo "DATABASE_URL=postgres://postgres:password@localhost/${database_name}" >> "${GITHUB_ENV}"
 
       - name: Install system dependencies
         run: |
@@ -158,9 +204,34 @@ jobs:
           bundler-cache: true
           working-directory: app
 
+      - name: Set up Node.js for GreensVilla system specs
+        if: inputs.project == 'greensvilla' && inputs.run_system_tests
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.10.0
+
+      - name: Install GreensVilla system-test dependencies
+        id: system_assets
+        if: inputs.project == 'greensvilla' && inputs.run_system_tests
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          {
+            bin/yarn install --immutable &&
+            bin/yarn build &&
+            bin/rails tailwindcss:build
+          } > "${RUNNER_TEMP}/system-assets.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "System-test assets: ${result^^}"
+          exit "${status}"
+
       - name: Prepare test database
         id: database
-        if: inputs.run_schema || inputs.run_tests || inputs.run_system_tests || inputs.run_targeted
+        if: inputs.run_schema || inputs.run_tests || inputs.run_system_tests || inputs.run_targeted || inputs.run_seeds
         continue-on-error: true
         working-directory: app
         shell: bash
@@ -179,13 +250,20 @@ jobs:
         continue-on-error: true
         working-directory: app
         shell: bash
+        env:
+          PROJECT: ${{ inputs.project }}
         run: |
           set +e
-          git diff -- db/schema.rb > "${RUNNER_TEMP}/schema.diff"
-          git diff --quiet -- db/schema.rb
+          if [ "${PROJECT}" = "greensvilla" ]; then
+            schema_path="db/structure.sql"
+          else
+            schema_path="db/schema.rb"
+          fi
+          git diff -- "${schema_path}" > "${RUNNER_TEMP}/schema.diff"
+          git diff --quiet -- "${schema_path}"
           status=$?
           if [ "${status}" -ne 0 ]; then
-            cp db/schema.rb "${RUNNER_TEMP}/generated-schema.rb"
+            cp "${schema_path}" "${RUNNER_TEMP}/generated-schema"
           fi
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
@@ -200,48 +278,81 @@ jobs:
         shell: bash
         env:
           PROJECT: ${{ inputs.project }}
+          SKIP_CSS_BUILD: "1"
+          SKIP_JS_BUILD: "1"
         run: |
           set +e
-          if [ "${PROJECT}" = "pashamcrafts" ]; then
-            bundle exec rspec --format progress > "${RUNNER_TEMP}/tests.log" 2>&1
-            command_status=$?
-            summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
-            coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/tests.log" | tail -n 1 | awk '{print $3}' || true)"
-            coverage_status=1
-            if [ -n "${coverage}" ]; then
-              awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
-              coverage_status=$?
-            fi
-            if [ "${command_status}" -eq 0 ] && [ "${coverage_status}" -eq 0 ]; then
-              result=success
-            else
-              result=failure
-            fi
-            [ -n "${summary}" ] && echo "RSpec: ${summary}" || echo "RSpec summary unavailable."
-            [ -n "${coverage}" ] && echo "Line coverage: ${coverage}%" || echo "Line coverage unavailable."
-          else
-            bin/rails test > "${RUNNER_TEMP}/tests.log" 2>&1
-            command_status=$?
-            result=$([ "${command_status}" -eq 0 ] && echo success || echo failure)
-            summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
-            [ -n "${summary}" ] && echo "Minitest: ${summary}" || echo "Minitest summary unavailable."
-          fi
+          case "${PROJECT}" in
+            pashamcrafts)
+              bundle exec rspec --format progress > "${RUNNER_TEMP}/tests.log" 2>&1
+              command_status=$?
+              summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
+              coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/tests.log" | tail -n 1 | awk '{print $3}' || true)"
+              coverage_status=1
+              if [ -n "${coverage}" ]; then
+                awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
+                coverage_status=$?
+              fi
+              if [ "${command_status}" -eq 0 ] && [ "${coverage_status}" -eq 0 ]; then result=success; else result=failure; fi
+              [ -n "${summary}" ] && echo "RSpec: ${summary}" || echo "RSpec summary unavailable."
+              [ -n "${coverage}" ] && echo "Line coverage: ${coverage}%" || echo "Line coverage unavailable."
+              ;;
+            taleemi_idara)
+              bin/rails test > "${RUNNER_TEMP}/tests.log" 2>&1
+              command_status=$?
+              result=$([ "${command_status}" -eq 0 ] && echo success || echo failure)
+              summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
+              [ -n "${summary}" ] && echo "Minitest: ${summary}" || echo "Minitest summary unavailable."
+              ;;
+            greensvilla)
+              bin/rails db:test:prepare > "${RUNNER_TEMP}/test-database.log" 2>&1 && \
+                bundle exec rspec --exclude-pattern 'spec/system/**/*_spec.rb' --format progress > "${RUNNER_TEMP}/tests.log" 2>&1
+              command_status=$?
+              result=$([ "${command_status}" -eq 0 ] && echo success || echo failure)
+              summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
+              [ -n "${summary}" ] && echo "RSpec: ${summary}" || echo "RSpec summary unavailable."
+              ;;
+          esac
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          exit $([ "${result}" = success ] && echo 0 || echo 1)
+          if [ "${result}" = success ]; then exit 0; else exit 1; fi
 
-      - name: Run Taleemi Idara system tests
+      - name: Run project system tests
         id: system_tests
         if: inputs.run_system_tests && steps.database.outputs.result == 'success'
         continue-on-error: true
         working-directory: app
         shell: bash
+        env:
+          PROJECT: ${{ inputs.project }}
+          SKIP_CSS_BUILD: "1"
+          SKIP_JS_BUILD: "1"
         run: |
           set +e
-          bin/rails test:system > "${RUNNER_TEMP}/system-tests.log" 2>&1
-          status=$?
+          case "${PROJECT}" in
+            taleemi_idara)
+              bin/rails test:system > "${RUNNER_TEMP}/system-tests.log" 2>&1
+              status=$?
+              summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/system-tests.log" | tail -n 1 || true)"
+              ;;
+            greensvilla)
+              if [ "${{ steps.system_assets.outputs.result }}" != "success" ]; then
+                echo "System-test asset preparation failed." > "${RUNNER_TEMP}/system-tests.log"
+                status=1
+              else
+                bin/rails db:test:prepare > "${RUNNER_TEMP}/system-database.log" 2>&1 && \
+                  bundle exec rspec spec/system --format progress > "${RUNNER_TEMP}/system-tests.log" 2>&1
+                status=$?
+              fi
+              summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/system-tests.log" | tail -n 1 || true)"
+              ;;
+            *)
+              echo "System tests are not configured for ${PROJECT}." > "${RUNNER_TEMP}/system-tests.log"
+              status=1
+              summary=""
+              ;;
+          esac
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/system-tests.log" | tail -n 1 || true)"
           [ -n "${summary}" ] && echo "System tests: ${summary}" || echo "System-test summary unavailable."
           exit "${status}"
 
@@ -254,6 +365,8 @@ jobs:
         env:
           PROJECT: ${{ inputs.project }}
           SPECS_JSON: ${{ inputs.specs_json }}
+          SKIP_CSS_BUILD: "1"
+          SKIP_JS_BUILD: "1"
         run: |
           set +e
           mapfile -t specs < <(jq -r '.[]' <<< "${SPECS_JSON}")
@@ -261,17 +374,15 @@ jobs:
             path="${spec%%:*}"
             [ -f "${path}" ] || { echo "Requested test does not exist."; exit 2; }
           done
-
-          if [ "${PROJECT}" = "pashamcrafts" ]; then
-            bundle exec rspec "${specs[@]}" --format progress > "${RUNNER_TEMP}/targeted-tests.log" 2>&1
-            status=$?
-            summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/targeted-tests.log" | tail -n 1 || true)"
-          else
+          if [ "${PROJECT}" = "taleemi_idara" ]; then
             bin/rails test "${specs[@]}" > "${RUNNER_TEMP}/targeted-tests.log" 2>&1
             status=$?
             summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/targeted-tests.log" | tail -n 1 || true)"
+          else
+            bundle exec rspec "${specs[@]}" --format progress > "${RUNNER_TEMP}/targeted-tests.log" 2>&1
+            status=$?
+            summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/targeted-tests.log" | tail -n 1 || true)"
           fi
-
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           [ -n "${summary}" ] && echo "Targeted tests: ${summary}" || echo "Targeted summary unavailable."
@@ -279,7 +390,7 @@ jobs:
 
       - name: Run PashamCrafts backup and restore drill
         id: restore
-        if: inputs.run_restore
+        if: inputs.run_restore && inputs.project == 'pashamcrafts'
         continue-on-error: true
         working-directory: app
         shell: bash
@@ -296,8 +407,9 @@ jobs:
             bin/rails runner 'Audit::Recorder.record!(action: "backup.restore_drill")' &&
             bin/backup_database &&
             createdb --host=localhost --username=postgres pashamcrafts_restore_test &&
-            export BACKUP_FILE="$(find "${BACKUP_DIR}" -name '*.dump' -type f | head -n 1)" &&
-            test -n "${BACKUP_FILE}" &&
+            backup_file="$(find "${BACKUP_DIR}" -name '*.dump' -type f | head -n 1)" &&
+            test -n "${backup_file}" &&
+            export BACKUP_FILE="${backup_file}" &&
             bin/verify_database_restore &&
             test "$(psql "${RESTORE_DATABASE_URL}" -Atqc "SELECT COUNT(*) FROM audit_events WHERE action = 'backup.restore_drill'")" = "1"
           } > "${RUNNER_TEMP}/restore.log" 2>&1
@@ -305,6 +417,27 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "Backup and restore: ${result^^}"
+          exit "${status}"
+
+      - name: Run GreensVilla seed verification
+        id: seeds
+        if: inputs.run_seeds && inputs.project == 'greensvilla' && steps.database.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        env:
+          SKIP_CSS_BUILD: "1"
+          SKIP_JS_BUILD: "1"
+        run: |
+          set +e
+          {
+            bin/rails db:test:prepare db:seed:replant &&
+            bin/rails db:seed
+          } > "${RUNNER_TEMP}/seeds.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Seeds: ${result^^}"
           exit "${status}"
 
       - name: Collect database-backed results
@@ -318,15 +451,16 @@ jobs:
           SYSTEM_TESTS_RESULT: ${{ steps.system_tests.outputs.result }}
           TARGETED_RESULT: ${{ steps.targeted.outputs.result }}
           RESTORE_RESULT: ${{ steps.restore.outputs.result }}
+          SEEDS_RESULT: ${{ steps.seeds.outputs.result }}
         run: |
           set -euo pipefail
-
           database="${DATABASE_RESULT:-skipped}"
           schema="${SCHEMA_RESULT:-skipped}"
           tests="${TESTS_RESULT:-skipped}"
           system_tests="${SYSTEM_TESTS_RESULT:-skipped}"
           targeted="${TARGETED_RESULT:-skipped}"
           restore="${RESTORE_RESULT:-skipped}"
+          seeds="${SEEDS_RESULT:-skipped}"
           result=success
 
           require_check() {
@@ -334,13 +468,13 @@ jobs:
             [ "${enabled}" = false ] || [ "${value}" = success ] || result=failure
           }
 
-          if [ "${{ inputs.run_schema || inputs.run_tests || inputs.run_system_tests || inputs.run_targeted }}" = true ] &&
-             [ "${database}" != success ]; then
+          if [ "${{ inputs.run_schema || inputs.run_tests || inputs.run_system_tests || inputs.run_targeted || inputs.run_seeds }}" = true ] && [ "${database}" != success ]; then
             result=failure
             [ "${{ inputs.run_schema }}" = false ] || schema=failure
             [ "${{ inputs.run_tests }}" = false ] || tests=failure
             [ "${{ inputs.run_system_tests }}" = false ] || system_tests=failure
             [ "${{ inputs.run_targeted }}" = false ] || targeted=failure
+            [ "${{ inputs.run_seeds }}" = false ] || seeds=failure
           fi
 
           require_check "${{ inputs.run_schema }}" "${schema}"
@@ -348,6 +482,7 @@ jobs:
           require_check "${{ inputs.run_system_tests }}" "${system_tests}"
           require_check "${{ inputs.run_targeted }}" "${targeted}"
           require_check "${{ inputs.run_restore }}" "${restore}"
+          require_check "${{ inputs.run_seeds }}" "${seeds}"
 
           {
             echo "result=${result}"
@@ -356,16 +491,8 @@ jobs:
             echo "system_tests_result=${system_tests}"
             echo "targeted_result=${targeted}"
             echo "restore_result=${restore}"
+            echo "seeds_result=${seeds}"
           } >> "${GITHUB_OUTPUT}"
-
-      - name: Package browser diagnostics
-        if: always() && steps.collect.outputs.result != 'success'
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -d app/tmp/screenshots ]; then
-            tar -czf "${RUNNER_TEMP}/system-screenshots.tar.gz" -C app/tmp screenshots
-          fi
 
       - name: Encrypt database diagnostics
         if: always() && steps.collect.outputs.result != 'success'
@@ -375,12 +502,15 @@ jobs:
             "${RUNNER_TEMP}/encrypted-db-diagnostics" \
             "${RUNNER_TEMP}/database.log" \
             "${RUNNER_TEMP}/schema.diff" \
-            "${RUNNER_TEMP}/generated-schema.rb" \
+            "${RUNNER_TEMP}/generated-schema" \
+            "${RUNNER_TEMP}/test-database.log" \
             "${RUNNER_TEMP}/tests.log" \
+            "${RUNNER_TEMP}/system-assets.log" \
+            "${RUNNER_TEMP}/system-database.log" \
             "${RUNNER_TEMP}/system-tests.log" \
-            "${RUNNER_TEMP}/system-screenshots.tar.gz" \
             "${RUNNER_TEMP}/targeted-tests.log" \
-            "${RUNNER_TEMP}/restore.log"
+            "${RUNNER_TEMP}/restore.log" \
+            "${RUNNER_TEMP}/seeds.log"
 
       - name: Upload encrypted database diagnostics
         if: always() && steps.collect.outputs.result != 'success'
