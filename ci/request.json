@@ -1,11 +1,11 @@
 {
-  "request_id": "issue-80-attribution-targeted-cb1127e",
-  "target_sha": "cb1127ebf862b3cbedcccab83a3a05c27d8ed0fd",
+  "request_id": "issue-80-stale-request-fixes-2413629",
+  "target_sha": "241362997fc8802b0e175072f495dc5557112a6f",
   "checks": ["targeted"],
   "specs": [
+    "spec/requests/admin/order_notifications_spec.rb",
+    "spec/requests/admin/orders_spec.rb",
     "spec/models/order_state_transition_spec.rb",
-    "spec/services/shipping/shipping_flow_spec.rb",
-    "spec/services/orders/transition_spec.rb",
-    "spec/services/orders/transition_defensive_guards_spec.rb"
+    "spec/services/shipping/shipping_flow_spec.rb"
   ]
 }
