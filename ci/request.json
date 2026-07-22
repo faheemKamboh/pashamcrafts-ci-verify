@@ -1,11 +1,6 @@
 {
-  "request_id": "issue-81-cancel-edge-targeted-6c1c7c42",
+  "request_id": "issue-81-release-full-6c1c7c42",
   "target_sha": "6c1c7c42ff9824ab76b8123e8d005cf169aabd85",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/services/after_sales/cancellation_decision_edges_spec.rb",
-    "spec/services/after_sales/workflows_spec.rb",
-    "spec/services/after_sales/idempotency_guards_spec.rb",
-    "spec/services/after_sales/defensive_guards_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
