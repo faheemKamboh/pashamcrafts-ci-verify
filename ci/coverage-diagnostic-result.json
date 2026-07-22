@@ -1,44 +1,11 @@
 {
-  "request_id": "issue-81-pre-schema-coverage-c5eb4fa",
-  "target_sha": "c5eb4fa46de7ff3d0e129da8c3ab47c23a62e453",
-  "summary": "1225 examples, 0 failures",
-  "coverage": "97.43",
+  "request_id": "issue-81-defensive-coverage-e421d785",
+  "target_sha": "e421d785e4a357517b1f59740670d37ed07e9e8c",
+  "summary": "1241 examples, 0 failures",
+  "coverage": "97.65",
   "command_status": 2,
   "failure_locations": [],
   "uncovered": [
-    {
-      "file": "app/services/after_sales/decide_cancellation.rb",
-      "missing_lines": [
-        45,
-        46,
-        62,
-        68,
-        96,
-        132,
-        154,
-        155,
-        158,
-        160,
-        166
-      ],
-      "executable_lines": 75,
-      "missed_count": 11
-    },
-    {
-      "file": "app/services/after_sales/decide_claim.rb",
-      "missing_lines": [
-        52,
-        97,
-        99,
-        115,
-        119,
-        149,
-        154,
-        156
-      ],
-      "executable_lines": 70,
-      "missed_count": 8
-    },
     {
       "file": "app/models/order.rb",
       "missing_lines": [
@@ -53,16 +20,16 @@
       "missed_count": 6
     },
     {
-      "file": "app/services/after_sales/submit_claim.rb",
+      "file": "app/services/after_sales/decide_cancellation.rb",
       "missing_lines": [
-        93,
-        95,
-        105,
-        139,
-        141,
-        143
+        45,
+        46,
+        99,
+        135,
+        165,
+        177
       ],
-      "executable_lines": 60,
+      "executable_lines": 80,
       "missed_count": 6
     },
     {
@@ -87,30 +54,6 @@
         67
       ],
       "executable_lines": 44,
-      "missed_count": 5
-    },
-    {
-      "file": "app/services/after_sales/record_refund.rb",
-      "missing_lines": [
-        66,
-        87,
-        91,
-        94,
-        96
-      ],
-      "executable_lines": 48,
-      "missed_count": 5
-    },
-    {
-      "file": "app/services/after_sales/request_cancellation.rb",
-      "missing_lines": [
-        59,
-        61,
-        87,
-        90,
-        92
-      ],
-      "executable_lines": 47,
       "missed_count": 5
     },
     {
@@ -145,6 +88,17 @@
         83
       ],
       "executable_lines": 61,
+      "missed_count": 4
+    },
+    {
+      "file": "app/services/after_sales/decide_claim.rb",
+      "missing_lines": [
+        52,
+        97,
+        99,
+        156
+      ],
+      "executable_lines": 70,
       "missed_count": 4
     },
     {
@@ -270,13 +224,13 @@
       "missed_count": 3
     },
     {
-      "file": "app/services/after_sales/transition_refund.rb",
+      "file": "app/services/after_sales/record_refund.rb",
       "missing_lines": [
-        44,
-        93,
-        95
+        66,
+        87,
+        96
       ],
-      "executable_lines": 58,
+      "executable_lines": 48,
       "missed_count": 3
     },
     {
@@ -431,6 +385,33 @@
         130
       ],
       "executable_lines": 90,
+      "missed_count": 2
+    },
+    {
+      "file": "app/models/customer_login_attempt.rb",
+      "missing_lines": [
+        61,
+        62
+      ],
+      "executable_lines": 27,
+      "missed_count": 2
+    },
+    {
+      "file": "app/models/material_purchase.rb",
+      "missing_lines": [
+        27,
+        33
+      ],
+      "executable_lines": 24,
+      "missed_count": 2
+    },
+    {
+      "file": "app/models/order_claim.rb",
+      "missing_lines": [
+        40,
+        44
+      ],
+      "executable_lines": 47,
       "missed_count": 2
     }
   ]
