@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-80-job-safeguards-86ea063",
-  "target_sha": "86ea0635935ecb007d54860c4c7b388edea49ffd",
-  "detail": "72 examples, 2 failures; ./spec/jobs/shipping/complete_delivered_order_job_spec.rb:63 | RSpec::Expectations::ExpectationNotMetError: expected to enqueue exactly 1 jobs, with [7], at 2026-07-22 15:53:00 1087697/2097152 +0000, but enqueued 0 | ./spec/jobs/shipping/complete_delivered_order_job_spec.rb:70:in 'block (2 levels) in <top (required)>' || ./spec/models/shipping_evidence_models_spec.rb:69 | RSpec::Expectations::ExpectationNotMetError: expected [\"must be a valid HTTPS link\"] to include \"must be a valid link\" | ./spec/models/shipping_evidence_models_spec.rb:76:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-80-final-targeted-63595b9",
+  "target_sha": "63595b9c241b3dec491af85e2de43bd4c2f99ec2",
+  "detail": "72 examples, 2 failures; ./spec/jobs/shipping/complete_delivered_order_job_spec.rb:63 | RSpec::Expectations::ExpectationNotMetError: expected to enqueue exactly 1 jobs, with [7], at 2026-07-22 15:54:08 2161251/4194304 +0000, but enqueued 0 | ./spec/jobs/shipping/complete_delivered_order_job_spec.rb:70:in 'block (2 levels) in <top (required)>' || ./spec/models/shipping_evidence_models_spec.rb:69 | RSpec::Expectations::ExpectationNotMetError: expected [\"must be a valid HTTPS link\"] to include \"must be a valid link\" | ./spec/models/shipping_evidence_models_spec.rb:76:in 'block (2 levels) in <top (required)>'"
 }
