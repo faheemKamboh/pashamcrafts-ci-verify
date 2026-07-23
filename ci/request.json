@@ -1,13 +1,6 @@
 {
-  "request_id": "issue-95-stabilized-targeted-5311a7fe",
+  "request_id": "issue-95-stabilized-full-5311a7fe",
   "target_sha": "5311a7fe5d960c34b44e9e2ee22995bd51a34e94",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/models/order_message_spec.rb",
-    "spec/requests/cart_error_boundaries_spec.rb",
-    "spec/requests/carts_spec.rb",
-    "spec/requests/checkouts_spec.rb",
-    "spec/services/order_messages/create_spec.rb",
-    "spec/requests/order_messages_spec.rb"
-  ]
+  "checks": ["full"],
+  "specs": []
 }
