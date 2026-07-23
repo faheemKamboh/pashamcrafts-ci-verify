@@ -1,6 +1,6 @@
 {
   "project": "taleemi_idara",
-  "request_id": "taleemi-pr-225-full-506b096-r1",
+  "request_id": "taleemi-pr-225-full-506b096-r2",
   "target_sha": "506b096eacfbd9349afc822a77a1c079a16803bd",
   "checks": ["full"],
   "specs": []
