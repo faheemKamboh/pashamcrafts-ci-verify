@@ -1,6 +1,13 @@
 {
-  "request_id": "issue-95-release-full-aa42e75a-rerun1",
-  "target_sha": "aa42e75a57a5e042c48ce46b681b9ae96f9364bf",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-95-repaired-targeted-6bda0ec5",
+  "target_sha": "6bda0ec54f457fd5f306d2ed4a6a5e5dc8981dc4",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/models/order_message_spec.rb",
+    "spec/requests/cart_error_boundaries_spec.rb",
+    "spec/requests/carts_spec.rb",
+    "spec/requests/checkouts_spec.rb",
+    "spec/services/order_messages/create_spec.rb",
+    "spec/requests/order_messages_spec.rb"
+  ]
 }
