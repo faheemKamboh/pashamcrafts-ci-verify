@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-95-repaired-targeted-6bda0ec5",
-  "target_sha": "6bda0ec54f457fd5f306d2ed4a6a5e5dc8981dc4",
-  "detail": "46 examples, 1 failures; ./spec/models/order_message_spec.rb:40 | RSpec::Expectations::ExpectationNotMetError: expected #<OrderMessage id: nil, audit_metadata: {}, body: \"Please update me about this order.\", created_at: nil, message_kind: \"manual\", order_id: nil, read_at: nil, read_by_admin_at: nil, read_by_customer_at: nil, request_key: [FILTERED], sender_role: \"customer\", system_event: nil, updated_at: nil, user_id: nil, visibility: \"customer_visible\"> not to be valid | ./spec/models/order_message_spec.rb:44:in 'block (2 levels) in <top (required)>'"
+  "request_id": "issue-95-stabilized-targeted-5311a7fe",
+  "target_sha": "5311a7fe5d960c34b44e9e2ee22995bd51a34e94",
+  "detail": "46 examples, 0 failures; no failure detail"
 }
