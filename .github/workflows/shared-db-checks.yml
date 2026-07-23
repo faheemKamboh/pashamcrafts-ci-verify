@@ -314,7 +314,8 @@ jobs:
               [ -n "${coverage}" ] && echo "Line coverage: ${coverage}%" || echo "Line coverage unavailable."
               ;;
             taleemi_idara)
-              bin/rails test > "${RUNNER_TEMP}/tests.log" 2>&1
+              unset SKIP_CSS_BUILD SKIP_JS_BUILD
+              bin/rails db:test:prepare test > "${RUNNER_TEMP}/tests.log" 2>&1
               command_status=$?
               result=$([ "${command_status}" -eq 0 ] && echo success || echo failure)
               summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
@@ -346,7 +347,8 @@ jobs:
           set +e
           case "${PROJECT}" in
             taleemi_idara)
-              bin/rails test:system > "${RUNNER_TEMP}/system-tests.log" 2>&1
+              unset SKIP_CSS_BUILD SKIP_JS_BUILD
+              bin/rails db:test:prepare test:system > "${RUNNER_TEMP}/system-tests.log" 2>&1
               status=$?
               summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/system-tests.log" | tail -n 1 || true)"
               ;;
@@ -391,6 +393,7 @@ jobs:
             [ -f "${path}" ] || { echo "Requested test does not exist."; exit 2; }
           done
           if [ "${PROJECT}" = "taleemi_idara" ]; then
+            unset SKIP_CSS_BUILD SKIP_JS_BUILD
             bin/rails test "${specs[@]}" > "${RUNNER_TEMP}/targeted-tests.log" 2>&1
             status=$?
             summary="$(grep -E '[0-9]+ runs?, [0-9]+ assertions?, [0-9]+ failures?, [0-9]+ errors?' "${RUNNER_TEMP}/targeted-tests.log" | tail -n 1 || true)"
