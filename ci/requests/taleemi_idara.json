@@ -1,7 +1,7 @@
 {
   "project": "taleemi_idara",
-  "request_id": "taleemi-develop-full-3d469a0-r1",
-  "target_sha": "3d469a0b88333963c414688ad35e9ed215b40f59",
+  "request_id": "taleemi-pr-223-full-43a9c5d-r1",
+  "target_sha": "43a9c5db47dfddea42f47f0c219cbecaec47a6eb",
   "checks": ["full"],
   "specs": []
 }
