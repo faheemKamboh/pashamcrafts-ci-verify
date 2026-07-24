@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-82-reviews-targeted-9bd3838f",
-  "target_sha": "9bd3838f2dfa9bf5066f5da23f0790d1a1959f81",
+  "request_id": "issue-82-reviews-targeted-d44ab9ab",
+  "target_sha": "d44ab9ab3bd79328895c6ff63c1df6b26e67aeec",
   "checks": ["targeted"],
   "specs": [
     "spec/models/product_review_spec.rb",
