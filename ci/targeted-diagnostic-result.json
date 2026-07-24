@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-82-reviews-targeted-d44ab9ab",
-  "target_sha": "d44ab9ab3bd79328895c6ff63c1df6b26e67aeec",
-  "detail": "0 examples, load failure; no failure detail"
+  "request_id": "issue-82-reviews-targeted-7dae4b27",
+  "target_sha": "7dae4b27cd517042f2192689b359b8f503eb6b46",
+  "detail": "16 examples, 1 failures; ./spec/requests/product_reviews_public_spec.rb:34 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\" dir=\\\"ltr\\\">\\n  <head>\\n    <title>Crochet Product 17 | PashamCra...text-stone-500\\\">© 2026 PashamCrafts. All rights reserved.</div>\\n</footer>\\n\\n  </body>\\n</html>\\n\" not to include \"Verified Purchase\" | ./spec/requests/product_reviews_public_spec.rb:40:in 'block (2 levels) in <top (required)>'"
 }
