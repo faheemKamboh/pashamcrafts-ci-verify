@@ -1,7 +1,11 @@
 {
-  "project": "taleemi_idara",
-  "request_id": "taleemi-pr-223-full-05d9b7b-r2",
-  "target_sha": "05d9b7bcd7d6b7fb9277e1f6db61b140810ddd7b",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-82-reviews-targeted-6af4be3f",
+  "target_sha": "6af4be3fdd757c4a79539d33b3131b01eb0b321a",
+  "checks": ["targeted"],
+  "specs": [
+    "spec/models/product_review_spec.rb",
+    "spec/requests/order_reviews_spec.rb",
+    "spec/requests/admin_product_reviews_spec.rb",
+    "spec/requests/product_reviews_public_spec.rb"
+  ]
 }
