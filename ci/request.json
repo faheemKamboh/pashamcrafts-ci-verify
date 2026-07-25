@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-136-brand-logo-fuchsia-b39d450e",
-  "target_sha": "b39d450eb931a9a146cc8d4f9ff18288c1a0b52b",
+  "request_id": "issue-136-brand-logo-fuchsia-e80cfa8f",
+  "target_sha": "e80cfa8fa8ea60180fcdc27bd3c64ee83d8bd6bd",
   "checks": ["full"],
   "specs": []
 }
