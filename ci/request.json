@@ -1,11 +1,6 @@
 {
-  "request_id": "issue-82-reviews-targeted-7dae4b27",
-  "target_sha": "7dae4b27cd517042f2192689b359b8f503eb6b46",
-  "checks": ["targeted"],
-  "specs": [
-    "spec/models/product_review_spec.rb",
-    "spec/requests/order_reviews_spec.rb",
-    "spec/requests/admin_product_reviews_spec.rb",
-    "spec/requests/product_reviews_public_spec.rb"
-  ]
+  "request_id": "issue-136-brand-logo-fuchsia-fd54b051",
+  "target_sha": "fd54b05138ec04481d62df0d34b75ec28fe6de7c",
+  "checks": ["full"],
+  "specs": []
 }
