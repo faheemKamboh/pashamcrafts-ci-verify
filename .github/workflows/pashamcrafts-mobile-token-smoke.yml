@@ -1,0 +1,97 @@
+name: Verify PashamCrafts mobile CI credentials
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact pashamcrafts-mobile commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify mobile checkout and status publication
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Validate request and configured secrets
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          READ_TOKEN: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "${TARGET_SHA}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid target SHA."
+            exit 1
+          }
+          [ -n "${READ_TOKEN}" ] || {
+            echo "PASHAMCRAFTS_READ_TOKEN is not configured."
+            exit 1
+          }
+          [ -n "${STATUS_TOKEN}" ] || {
+            echo "PASHAMCRAFTS_STATUS_TOKEN is not configured."
+            exit 1
+          }
+
+      - name: Checkout exact private mobile commit
+        id: checkout
+        continue-on-error: true
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts-mobile
+          ref: ${{ inputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        id: confirm
+        if: steps.checkout.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: test "$(git -C app rev-parse HEAD)" = "${TARGET_SHA}"
+
+      - name: Publish private commit status
+        id: publish
+        if: always()
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
+          CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
+          CONFIRM_OUTCOME: ${{ steps.confirm.outcome }}
+        run: |
+          set -euo pipefail
+
+          if [ "${CHECKOUT_OUTCOME}" = "success" ] && [ "${CONFIRM_OUTCOME}" = "success" ]; then
+            state=success
+            description="Public verifier credentials are configured correctly"
+          else
+            state=failure
+            description="Public verifier credential smoke test failed"
+          fi
+
+          payload="$(jq -n \
+            --arg state "${state}" \
+            --arg context "pashamcrafts-mobile/credential-smoke" \
+            --arg description "${description}" \
+            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${STATUS_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/faheemKamboh/pashamcrafts-mobile/statuses/${TARGET_SHA}" \
+            --data "${payload}" > /dev/null
+
+          test "${state}" = success
