@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-84-print-documents-targeted-d1b01eb",
+  "request_id": "issue-84-print-documents-full-d1b01eb",
   "target_sha": "d1b01ebd987eda5bb346a1c3d65042133d577483",
-  "checks": ["targeted"],
-  "specs": ["spec/requests/admin/order_print_documents_spec.rb"]
+  "checks": ["full"],
+  "specs": []
 }
