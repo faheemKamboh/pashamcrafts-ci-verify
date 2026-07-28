@@ -115,7 +115,14 @@ jobs:
           npm run typecheck > "${RUNNER_TEMP}/typecheck.log" 2>&1
           status=$?
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          detail="success"
+          if [ "${status}" -ne 0 ]; then
+            detail="$(grep -E '(error TS[0-9]+|Cannot find name|Type .+ is not assignable|Property .+ does not exist|Argument of type .+ is not assignable)' "${RUNNER_TEMP}/typecheck.log" | head -n 1 || true)"
+            [ -n "${detail}" ] || detail="typescript-failed"
+          fi
+          detail="$(printf '%s' "${detail}" | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//g' | cut -c1-62)"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
           echo "TypeScript: ${result^^}"
           exit 0
 
@@ -236,6 +243,7 @@ jobs:
           CONFIRM: ${{ steps.confirm.outcome }}
           INSTALL: ${{ steps.install.outputs.result }}
           TYPECHECK: ${{ steps.typecheck.outputs.result }}
+          TYPECHECK_DETAIL: ${{ steps.typecheck.outputs.detail }}
           LINT: ${{ steps.lint.outputs.result }}
           TESTS: ${{ steps.tests.outputs.result }}
           DOCTOR: ${{ steps.doctor.outputs.result }}
@@ -248,6 +256,7 @@ jobs:
           checkout=$([ "${CHECKOUT:-failure}" = success ] && [ "${CONFIRM:-failure}" = success ] && echo success || echo failure)
           install="${INSTALL:-failure}"
           typecheck="${TYPECHECK:-failure}"
+          typecheck_detail="${TYPECHECK_DETAIL:-not-run}"
           lint="${LINT:-failure}"
           tests="${TESTS:-failure}"
           doctor="${DOCTOR:-failure}"
@@ -263,6 +272,7 @@ jobs:
             echo "checkout=${checkout}"
             echo "install=${install}"
             echo "typecheck=${typecheck}"
+            echo "typecheck_detail=${typecheck_detail}"
             echo "lint=${lint}"
             echo "tests=${tests}"
             echo "doctor=${doctor}"
@@ -282,6 +292,7 @@ jobs:
           CHECKOUT: ${{ steps.collect.outputs.checkout }}
           INSTALL: ${{ steps.collect.outputs.install }}
           TYPECHECK: ${{ steps.collect.outputs.typecheck }}
+          TYPECHECK_DETAIL: ${{ steps.collect.outputs.typecheck_detail }}
           LINT: ${{ steps.collect.outputs.lint }}
           TESTS: ${{ steps.collect.outputs.tests }}
           DOCTOR: ${{ steps.collect.outputs.doctor }}
@@ -314,6 +325,7 @@ jobs:
           publish_status checkout "${CHECKOUT:-failure}" "Private exact-SHA checkout"
           publish_status install "${INSTALL:-failure}" "Dependency installation"
           publish_status typecheck "${TYPECHECK:-failure}" "TypeScript"
+          publish_status "typecheck-detail/${TYPECHECK_DETAIL:-not-run}" "${TYPECHECK:-failure}" "TypeScript detail"
           publish_status lint "${LINT:-failure}" "ESLint"
           publish_status tests "${TESTS:-failure}" "Unit and component tests"
           publish_status doctor "${DOCTOR:-failure}" "Expo Doctor"
@@ -343,18 +355,19 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: encrypted-mobile-${{ steps.request.outputs.target_sha }}
-          path: ${{ runner.temp }}/encrypted-mobile-diagnostics
+          path: ${{ runner.temp }}/encrypted-mobile-diagnostics/**
+          if-no-files-found: error
           retention-days: 1
 
       - name: Upload generated dependency lock
-        if: steps.install.outputs.result == 'success' && steps.lock.outputs.had_lock == 'false'
+        if: always() && steps.install.outputs.result == 'success' && steps.lock.outputs.had_lock == 'false'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: pashamcrafts-mobile-package-lock-${{ steps.request.outputs.target_sha }}
           path: app/package-lock.json
+          if-no-files-found: ignore
           retention-days: 1
 
       - name: Enforce overall result
         if: always() && steps.request.outcome == 'success'
-        shell: bash
         run: test "${{ steps.collect.outputs.overall }}" = success
