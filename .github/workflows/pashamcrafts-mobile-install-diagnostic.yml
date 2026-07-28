@@ -1,0 +1,68 @@
+name: Diagnose PashamCrafts mobile install
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pashamcrafts-mobile-install-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Resolve public dependency installation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout verifier configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Resolve exact mobile SHA
+        id: request
+        shell: bash
+        env:
+          READ_TOKEN: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          target_sha="$(jq -er '.target_sha' ci/requests/pashamcrafts-mobile.json)"
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          [ -n "${READ_TOKEN}" ]
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact private mobile commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts-mobile
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "22"
+
+      - name: Diagnose dependency resolution
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          npm install > "${RUNNER_TEMP}/npm-install.log" 2>&1
+          status=$?
+          if [ "${status}" -eq 0 ]; then
+            echo "Dependency installation succeeded; no diagnostic is required."
+            exit 0
+          fi
+
+          echo "Dependency installation failed. Sanitized npm resolver output follows:"
+          grep -E '^(npm (error|ERR!) )?(code |ERESOLVE|E[[:upper:]]+|While resolving:|Found:|Could not resolve dependency:|Conflicting peer dependency:|No matching version found|notarget|peer |Fix the upstream dependency conflict)' "${RUNNER_TEMP}/npm-install.log" \
+            | sed -E 's#https?://[^[:space:]]+#[url]#g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#[redacted]#g' \
+            | head -n 60
+          exit "${status}"
