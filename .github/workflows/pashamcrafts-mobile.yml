@@ -159,7 +159,8 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           detail="success"
           if [ "${status}" -ne 0 ]; then
-            detail="$(grep -E '(^✖|^✘|^Error:|failed|Failed|Invalid|missing|mismatch|incompatible|Expected|Actual)' "${RUNNER_TEMP}/doctor.log" | tail -n 1)"
+            detail="$(grep -E '(^✖|^✘)' "${RUNNER_TEMP}/doctor.log" | tail -n 1)"
+            [ -n "${detail}" ] || detail="$(grep -E '(failed|Failed|Invalid|missing|mismatch|incompatible|Expected|Actual)' "${RUNNER_TEMP}/doctor.log" | tail -n 1)"
             [ -n "${detail}" ] || detail="expo-doctor-failed"
           fi
           detail="$(printf '%s' "${detail}" | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//g' | cut -c1-62)"
@@ -198,27 +199,8 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           detail="success"
           if [ "${status}" -ne 0 ]; then
-            detail="$(node - <<'NODE' "${RUNNER_TEMP}/audit.json" "${RUNNER_TEMP}/audit.stderr"
-          const fs = require('fs');
-          const jsonPath = process.argv[2];
-          const stderrPath = process.argv[3];
-          try {
-            const parsed = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-            const vulnerabilities = parsed.vulnerabilities || {};
-            const first = Object.values(vulnerabilities).find((item) => ['high', 'critical'].includes(item.severity));
-            if (first) {
-              const via = Array.isArray(first.via) ? first.via.find((entry) => typeof entry === 'object') : null;
-              const title = via && via.title ? via.title : 'runtime-audit-failed';
-              console.log(`${first.severity || 'unknown'}-${first.name || 'unknown-package'}-${title}`);
-            } else {
-              console.log('runtime-audit-failed');
-            }
-          } catch (_error) {
-            const stderr = fs.existsSync(stderrPath) ? fs.readFileSync(stderrPath, 'utf8') : '';
-            console.log(stderr.split(/\r?\n/).find(Boolean) || 'runtime-audit-json-unreadable');
-          }
-          NODE
-          )"
+            detail="$(jq -r '.vulnerabilities | to_entries | map(select(.value.severity == "high" or .value.severity == "critical")) | first | if . == null then "runtime-audit-failed" else (.value.severity + "-" + .key + "-runtime-audit-failed") end' "${RUNNER_TEMP}/audit.json" 2>/dev/null)"
+            [ -n "${detail}" ] || detail="runtime-audit-json-unreadable"
           fi
           detail="$(printf '%s' "${detail}" | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//g' | cut -c1-62)"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
