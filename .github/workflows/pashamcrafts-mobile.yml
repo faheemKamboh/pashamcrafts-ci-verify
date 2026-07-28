@@ -1,0 +1,343 @@
+name: Validate PashamCrafts mobile
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact pashamcrafts-mobile commit SHA
+        required: true
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pashamcrafts-mobile.yml"
+      - "ci/requests/pashamcrafts-mobile.json"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Expo mobile foundation checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout verifier configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Resolve exact request
+        id: request
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_TARGET_SHA: ${{ inputs.target_sha }}
+          READ_TOKEN: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            target_sha="${DISPATCH_TARGET_SHA}"
+          else
+            target_sha="$(jq -er '.target_sha' ci/requests/pashamcrafts-mobile.json)"
+          fi
+
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid target SHA."
+            exit 1
+          }
+          [ -n "${READ_TOKEN}" ] || {
+            echo "PASHAMCRAFTS_READ_TOKEN is not configured."
+            exit 1
+          }
+          [ -n "${STATUS_TOKEN}" ] || {
+            echo "PASHAMCRAFTS_STATUS_TOKEN is not configured."
+            exit 1
+          }
+
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact private mobile commit
+        id: checkout
+        continue-on-error: true
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts-mobile
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        id: confirm
+        if: steps.checkout.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
+        run: test "$(git -C app rev-parse HEAD)" = "${TARGET_SHA}"
+
+      - name: Detect committed dependency lock
+        id: lock
+        if: steps.confirm.outcome == 'success'
+        shell: bash
+        run: |
+          if [ -f app/package-lock.json ]; then
+            echo "had_lock=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "had_lock=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Set up Node.js
+        if: steps.confirm.outcome == 'success'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        id: install
+        if: steps.confirm.outcome == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          if [ "${{ steps.lock.outputs.had_lock }}" = "true" ]; then
+            npm ci > "${RUNNER_TEMP}/npm-install.log" 2>&1
+          else
+            npm install > "${RUNNER_TEMP}/npm-install.log" 2>&1
+          fi
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Dependencies: ${result^^}"
+          exit "${status}"
+
+      - name: Run TypeScript checks
+        id: typecheck
+        if: steps.install.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck > "${RUNNER_TEMP}/typecheck.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "TypeScript: ${result^^}"
+          exit "${status}"
+
+      - name: Run ESLint
+        id: lint
+        if: steps.install.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          npm run lint > "${RUNNER_TEMP}/lint.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Lint: ${result^^}"
+          exit "${status}"
+
+      - name: Run unit and component tests
+        id: tests
+        if: steps.install.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          npm run test:ci > "${RUNNER_TEMP}/tests.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Tests: ${result^^}"
+          exit "${status}"
+
+      - name: Run Expo Doctor
+        id: doctor
+        if: steps.install.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          npm run doctor > "${RUNNER_TEMP}/doctor.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Expo Doctor: ${result^^}"
+          exit "${status}"
+
+      - name: Export production bundles
+        id: export
+        if: steps.install.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          npm run export > "${RUNNER_TEMP}/export.log" 2>&1
+          status=$?
+          if [ "${status}" -eq 0 ]; then
+            test -n "$(find dist -type f -size +0c -print -quit)"
+            status=$?
+          fi
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Export: ${result^^}"
+          exit "${status}"
+
+      - name: Audit production dependencies
+        id: audit
+        if: steps.install.outputs.result == 'success'
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          npm audit --omit=dev --audit-level=high > "${RUNNER_TEMP}/audit.log" 2>&1
+          status=$?
+          result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          echo "result=${result}" >> "${GITHUB_OUTPUT}"
+          echo "Production dependency audit: ${result^^}"
+          exit "${status}"
+
+      - name: Collect results
+        id: collect
+        if: always() && steps.request.outcome == 'success'
+        shell: bash
+        env:
+          CHECKOUT: ${{ steps.checkout.outcome }}
+          CONFIRM: ${{ steps.confirm.outcome }}
+          INSTALL: ${{ steps.install.outputs.result }}
+          TYPECHECK: ${{ steps.typecheck.outputs.result }}
+          LINT: ${{ steps.lint.outputs.result }}
+          TESTS: ${{ steps.tests.outputs.result }}
+          DOCTOR: ${{ steps.doctor.outputs.result }}
+          EXPORT_RESULT: ${{ steps.export.outputs.result }}
+          AUDIT: ${{ steps.audit.outputs.result }}
+        run: |
+          set -euo pipefail
+          checkout=$([ "${CHECKOUT:-failure}" = success ] && [ "${CONFIRM:-failure}" = success ] && echo success || echo failure)
+          install="${INSTALL:-failure}"
+          typecheck="${TYPECHECK:-failure}"
+          lint="${LINT:-failure}"
+          tests="${TESTS:-failure}"
+          doctor="${DOCTOR:-failure}"
+          export_result="${EXPORT_RESULT:-failure}"
+          audit="${AUDIT:-failure}"
+          overall=success
+
+          for result in "${checkout}" "${install}" "${typecheck}" "${lint}" "${tests}" "${doctor}" "${export_result}" "${audit}"; do
+            [ "${result}" = success ] || overall=failure
+          done
+
+          {
+            echo "checkout=${checkout}"
+            echo "install=${install}"
+            echo "typecheck=${typecheck}"
+            echo "lint=${lint}"
+            echo "tests=${tests}"
+            echo "doctor=${doctor}"
+            echo "export=${export_result}"
+            echo "audit=${audit}"
+            echo "overall=${overall}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Publish private commit statuses
+        if: always() && steps.request.outcome == 'success'
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
+          STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
+          CHECKOUT: ${{ steps.collect.outputs.checkout }}
+          INSTALL: ${{ steps.collect.outputs.install }}
+          TYPECHECK: ${{ steps.collect.outputs.typecheck }}
+          LINT: ${{ steps.collect.outputs.lint }}
+          TESTS: ${{ steps.collect.outputs.tests }}
+          DOCTOR: ${{ steps.collect.outputs.doctor }}
+          EXPORT_RESULT: ${{ steps.collect.outputs.export }}
+          AUDIT: ${{ steps.collect.outputs.audit }}
+          OVERALL: ${{ steps.collect.outputs.overall }}
+        run: |
+          set -euo pipefail
+          target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          publish_status() {
+            local context="$1"
+            local state="$2"
+            local label="$3"
+            local description
+            if [ "${state}" = success ]; then
+              description="${label} passed"
+            else
+              description="${label} failed"
+            fi
+            payload="$(jq -n \
+              --arg state "${state}" \
+              --arg context "pashamcrafts-mobile/${context}" \
+              --arg description "${description}" \
+              --arg target_url "${target_url}" \
+              '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            curl --fail-with-body --silent --show-error --request POST \
+              --header "Authorization: Bearer ${STATUS_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/faheemKamboh/pashamcrafts-mobile/statuses/${TARGET_SHA}" \
+              --data "${payload}" > /dev/null
+          }
+
+          publish_status checkout "${CHECKOUT}" "Private exact-SHA checkout"
+          publish_status install "${INSTALL}" "Dependency installation"
+          publish_status typecheck "${TYPECHECK}" "TypeScript"
+          publish_status lint "${LINT}" "ESLint"
+          publish_status tests "${TESTS}" "Unit and component tests"
+          publish_status doctor "${DOCTOR}" "Expo Doctor"
+          publish_status export "${EXPORT_RESULT}" "Production bundle export"
+          publish_status audit "${AUDIT}" "Production dependency audit"
+          publish_status full "${OVERALL}" "Mobile foundation validation"
+
+      - name: Encrypt failure diagnostics
+        if: always() && steps.collect.outputs.overall != 'success'
+        shell: bash
+        run: |
+          bash ci/encrypt-diagnostics.sh \
+            "${RUNNER_TEMP}/encrypted-mobile-diagnostics" \
+            "${RUNNER_TEMP}/npm-install.log" \
+            "${RUNNER_TEMP}/typecheck.log" \
+            "${RUNNER_TEMP}/lint.log" \
+            "${RUNNER_TEMP}/tests.log" \
+            "${RUNNER_TEMP}/doctor.log" \
+            "${RUNNER_TEMP}/export.log" \
+            "${RUNNER_TEMP}/audit.log"
+
+      - name: Upload encrypted failure diagnostics
+        if: always() && steps.collect.outputs.overall != 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: encrypted-mobile-${{ steps.request.outputs.target_sha }}
+          path: ${{ runner.temp }}/encrypted-mobile-diagnostics
+          retention-days: 1
+
+      - name: Upload generated dependency lock
+        if: steps.install.outputs.result == 'success' && steps.lock.outputs.had_lock == 'false'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pashamcrafts-mobile-package-lock-${{ steps.request.outputs.target_sha }}
+          path: app/package-lock.json
+          retention-days: 1
+
+      - name: Enforce overall result
+        if: always() && steps.request.outcome == 'success'
+        shell: bash
+        run: test "${{ steps.collect.outputs.overall }}" = success
