@@ -60,26 +60,42 @@ jobs:
           npm install > "${RUNNER_TEMP}/npm-install.log" 2>&1
           status=$?
 
+          slug() {
+            printf '%s' "$1" \
+              | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//g' \
+              | cut -c1-62
+          }
+
           if [ "${status}" -eq 0 ]; then
-            summary="Dependency installation succeeded"
             state=success
+            summary="Dependency installation succeeded"
+            code=success
+            resolving=none
+            found=none
+            peer=none
           else
             state=failure
-            summary="$(sed -n -E \
-              -e 's/^npm (error|ERR!) (No matching version found for .*)/\2/p' \
-              -e 's/^npm (error|ERR!) (Could not resolve dependency:.*)/\2/p' \
-              -e 's/^npm (error|ERR!) (Conflicting peer dependency:.*)/\2/p' \
-              -e 's/^npm (error|ERR!) (code [A-Z0-9_-]+)/\2/p' \
-              "${RUNNER_TEMP}/npm-install.log" | head -n 1)"
-            [ -n "${summary}" ] || summary="npm dependency resolution failed"
+            code="$(sed -n -E 's/^npm (error|ERR!) code ([A-Z0-9_-]+).*$/\2/p' "${RUNNER_TEMP}/npm-install.log" | head -n 1)"
+            resolving="$(sed -n -E 's/^npm (error|ERR!) While resolving: (.*)$/\2/p' "${RUNNER_TEMP}/npm-install.log" | head -n 1)"
+            found="$(sed -n -E 's/^npm (error|ERR!) Found: (.*)$/\2/p' "${RUNNER_TEMP}/npm-install.log" | head -n 1)"
+            peer="$(sed -n -E 's/^npm (error|ERR!) (peer(Optional)? .*)$/\2/p' "${RUNNER_TEMP}/npm-install.log" | head -n 1)"
+            no_target="$(sed -n -E 's/^npm (error|ERR!) (No matching version found for .*)$/\2/p' "${RUNNER_TEMP}/npm-install.log" | head -n 1)"
+
+            [ -n "${code}" ] || code=unknown
+            [ -n "${resolving}" ] || resolving=unknown
+            [ -n "${found}" ] || found=unknown
+            [ -n "${peer}" ] || peer="${no_target:-unknown}"
+            summary="npm ${code}: ${peer}"
           fi
 
-          summary="$(printf '%s' "${summary}" \
-            | sed -E 's#https?://[^[:space:]]+#[url]#g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#[redacted]#g' \
-            | cut -c1-120)"
-
-          echo "state=${state}" >> "${GITHUB_OUTPUT}"
-          echo "summary=${summary}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "state=${state}"
+            echo "summary=$(printf '%s' "${summary}" | cut -c1-120)"
+            echo "code=$(slug "${code}")"
+            echo "resolving=$(slug "${resolving}")"
+            echo "found=$(slug "${found}")"
+            echo "peer=$(slug "${peer}")"
+          } >> "${GITHUB_OUTPUT}"
 
           if [ "${status}" -ne 0 ]; then
             echo "Dependency installation failed. Sanitized npm resolver output follows:"
@@ -97,20 +113,36 @@ jobs:
           STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
           STATE: ${{ steps.diagnose.outputs.state }}
           SUMMARY: ${{ steps.diagnose.outputs.summary }}
+          CODE: ${{ steps.diagnose.outputs.code }}
+          RESOLVING: ${{ steps.diagnose.outputs.resolving }}
+          FOUND: ${{ steps.diagnose.outputs.found }}
+          PEER: ${{ steps.diagnose.outputs.peer }}
         run: |
           set -euo pipefail
-          payload="$(jq -n \
-            --arg state "${STATE}" \
-            --arg context "pashamcrafts-mobile/install-detail" \
-            --arg description "${SUMMARY}" \
-            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
-          curl --fail-with-body --silent --show-error --request POST \
-            --header "Authorization: Bearer ${STATUS_TOKEN}" \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "${{ github.api_url }}/repos/faheemKamboh/pashamcrafts-mobile/statuses/${TARGET_SHA}" \
-            --data "${payload}" > /dev/null
+          target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          publish() {
+            local context="$1"
+            local description="$2"
+            payload="$(jq -n \
+              --arg state "${STATE}" \
+              --arg context "${context}" \
+              --arg description "${description}" \
+              --arg target_url "${target_url}" \
+              '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            curl --fail-with-body --silent --show-error --request POST \
+              --header "Authorization: Bearer ${STATUS_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/faheemKamboh/pashamcrafts-mobile/statuses/${TARGET_SHA}" \
+              --data "${payload}" > /dev/null
+          }
+
+          publish "pashamcrafts-mobile/install-detail" "${SUMMARY}"
+          publish "pashamcrafts-mobile/install-code/${CODE}" "npm resolver code"
+          publish "pashamcrafts-mobile/install-resolving/${RESOLVING}" "package being resolved"
+          publish "pashamcrafts-mobile/install-found/${FOUND}" "resolved package version"
+          publish "pashamcrafts-mobile/install-peer/${PEER}" "conflicting peer requirement"
 
       - name: Enforce diagnosis result
         shell: bash
