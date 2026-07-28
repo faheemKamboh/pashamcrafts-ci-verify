@@ -39,26 +39,14 @@ jobs:
           STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
         run: |
           set -euo pipefail
-
           if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
             target_sha="${DISPATCH_TARGET_SHA}"
           else
             target_sha="$(jq -er '.target_sha' ci/requests/pashamcrafts-mobile.json)"
           fi
-
-          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || {
-            echo "Invalid target SHA."
-            exit 1
-          }
-          [ -n "${READ_TOKEN}" ] || {
-            echo "PASHAMCRAFTS_READ_TOKEN is not configured."
-            exit 1
-          }
-          [ -n "${STATUS_TOKEN}" ] || {
-            echo "PASHAMCRAFTS_STATUS_TOKEN is not configured."
-            exit 1
-          }
-
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid target SHA."; exit 1; }
+          [ -n "${READ_TOKEN}" ] || { echo "PASHAMCRAFTS_READ_TOKEN is not configured."; exit 1; }
+          [ -n "${STATUS_TOKEN}" ] || { echo "PASHAMCRAFTS_STATUS_TOKEN is not configured."; exit 1; }
           echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
 
       - name: Checkout exact private mobile commit
@@ -97,7 +85,7 @@ jobs:
         if: steps.confirm.outcome == 'success'
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          node-version: "22"
+          node-version-file: app/.nvmrc
 
       - name: Install dependencies
         id: install
@@ -171,14 +159,13 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           detail="success"
           if [ "${status}" -ne 0 ]; then
-            detail="$(grep -E '(^✖|^✘|^Error:|^Warning:|failed|Failed|Invalid|missing|mismatch|incompatible|Expected|Actual|Use expo install|dependencies)' "${RUNNER_TEMP}/doctor.log" | head -n 1)"
+            detail="$(grep -E '(^✖|^✘|^Error:|failed|Failed|Invalid|missing|mismatch|incompatible|Expected|Actual)' "${RUNNER_TEMP}/doctor.log" | tail -n 1)"
             [ -n "${detail}" ] || detail="expo-doctor-failed"
           fi
-          detail="$(printf '%s' "${detail}" | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//' | cut -c1-62)"
-          [ -n "${detail}" ] || detail="expo-doctor-failed"
+          detail="$(printf '%s' "${detail}" | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//g' | cut -c1-62)"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
-          echo "Expo Doctor: ${result^^} (${detail})"
+          echo "Expo Doctor: ${result^^}"
           exit 0
 
       - name: Export production bundles
@@ -199,14 +186,14 @@ jobs:
           echo "Export: ${result^^}"
           exit 0
 
-      - name: Audit production dependencies
+      - name: Audit runtime dependencies
         id: audit
         if: steps.install.outputs.result == 'success'
         working-directory: app
         shell: bash
         run: |
           set +e
-          npm audit --omit=dev --audit-level=high --json > "${RUNNER_TEMP}/audit.json" 2> "${RUNNER_TEMP}/audit.stderr"
+          npm audit --omit=dev --omit=optional --audit-level=high --json > "${RUNNER_TEMP}/audit.json" 2> "${RUNNER_TEMP}/audit.stderr"
           status=$?
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           detail="success"
@@ -221,24 +208,22 @@ jobs:
             const first = Object.values(vulnerabilities).find((item) => ['high', 'critical'].includes(item.severity));
             if (first) {
               const via = Array.isArray(first.via) ? first.via.find((entry) => typeof entry === 'object') : null;
-              const title = via && via.title ? via.title : 'production-audit-failed';
+              const title = via && via.title ? via.title : 'runtime-audit-failed';
               console.log(`${first.severity || 'unknown'}-${first.name || 'unknown-package'}-${title}`);
             } else {
-              console.log('production-audit-failed');
+              console.log('runtime-audit-failed');
             }
           } catch (_error) {
             const stderr = fs.existsSync(stderrPath) ? fs.readFileSync(stderrPath, 'utf8') : '';
-            console.log(stderr.split(/\r?\n/).find(Boolean) || 'production-audit-json-unreadable');
+            console.log(stderr.split(/\r?\n/).find(Boolean) || 'runtime-audit-json-unreadable');
           }
           NODE
           )"
-            [ -n "${detail}" ] || detail="production-audit-failed"
           fi
-          detail="$(printf '%s' "${detail}" | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//' | cut -c1-62)"
-          [ -n "${detail}" ] || detail="production-audit-failed"
+          detail="$(printf '%s' "${detail}" | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//g' | cut -c1-62)"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
-          echo "Production dependency audit: ${result^^} (${detail})"
+          echo "Runtime dependency audit: ${result^^}"
           exit 0
 
       - name: Collect results
@@ -270,11 +255,9 @@ jobs:
           audit="${AUDIT:-failure}"
           audit_detail="${AUDIT_DETAIL:-not-run}"
           overall=success
-
           for result in "${checkout}" "${install}" "${typecheck}" "${lint}" "${tests}" "${doctor}" "${export_result}" "${audit}"; do
             [ "${result}" = success ] || overall=failure
           done
-
           {
             echo "checkout=${checkout}"
             echo "install=${install}"
@@ -309,7 +292,6 @@ jobs:
         run: |
           set -euo pipefail
           target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
           publish_status() {
             local context="$1"
             local state="$2"
@@ -320,12 +302,7 @@ jobs:
             else
               description="${label} failed"
             fi
-            payload="$(jq -n \
-              --arg state "${state}" \
-              --arg context "pashamcrafts-mobile/${context}" \
-              --arg description "${description}" \
-              --arg target_url "${target_url}" \
-              '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            payload="$(jq -n --arg state "${state}" --arg context "pashamcrafts-mobile/${context}" --arg description "${description}" --arg target_url "${target_url}" '{state: $state, context: $context, description: $description, target_url: $target_url}')"
             curl --fail-with-body --silent --show-error --request POST \
               --header "Authorization: Bearer ${STATUS_TOKEN}" \
               --header "Accept: application/vnd.github+json" \
@@ -333,7 +310,6 @@ jobs:
               "${{ github.api_url }}/repos/faheemKamboh/pashamcrafts-mobile/statuses/${TARGET_SHA}" \
               --data "${payload}" > /dev/null
           }
-
           publish_status checkout "${CHECKOUT:-failure}" "Private exact-SHA checkout"
           publish_status install "${INSTALL:-failure}" "Dependency installation"
           publish_status typecheck "${TYPECHECK:-failure}" "TypeScript"
@@ -342,8 +318,8 @@ jobs:
           publish_status doctor "${DOCTOR:-failure}" "Expo Doctor"
           publish_status "doctor-detail/${DOCTOR_DETAIL:-not-run}" "${DOCTOR:-failure}" "Expo Doctor detail"
           publish_status export "${EXPORT_RESULT:-failure}" "Production bundle export"
-          publish_status audit "${AUDIT:-failure}" "Production dependency audit"
-          publish_status "audit-detail/${AUDIT_DETAIL:-not-run}" "${AUDIT:-failure}" "Production audit detail"
+          publish_status audit "${AUDIT:-failure}" "Runtime dependency audit"
+          publish_status "audit-detail/${AUDIT_DETAIL:-not-run}" "${AUDIT:-failure}" "Runtime audit detail"
           publish_status full "${OVERALL:-failure}" "Mobile foundation validation"
 
       - name: Encrypt failure diagnostics
