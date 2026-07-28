@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-84-print-documents-full-f3cbb6c-retry",
-  "target_sha": "f3cbb6cb91a7c50fd0881e72c41b8a722dae2b87",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-85-privacy-reports-targeted-98e4e7e",
+  "target_sha": "98e4e7e69c4448ca7068fbd2882e358f5f8084d9",
+  "checks": ["targeted"],
+  "specs": ["spec/requests/admin/reports_spec.rb"]
 }
