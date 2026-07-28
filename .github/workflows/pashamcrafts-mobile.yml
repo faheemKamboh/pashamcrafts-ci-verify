@@ -102,7 +102,6 @@ jobs:
       - name: Install dependencies
         id: install
         if: steps.confirm.outcome == 'success'
-        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -116,12 +115,11 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "Dependencies: ${result^^}"
-          exit "${status}"
+          exit 0
 
       - name: Run TypeScript checks
         id: typecheck
         if: steps.install.outputs.result == 'success'
-        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -131,12 +129,11 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "TypeScript: ${result^^}"
-          exit "${status}"
+          exit 0
 
       - name: Run ESLint
         id: lint
         if: steps.install.outputs.result == 'success'
-        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -146,12 +143,11 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "Lint: ${result^^}"
-          exit "${status}"
+          exit 0
 
       - name: Run unit and component tests
         id: tests
         if: steps.install.outputs.result == 'success'
-        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -161,12 +157,11 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "Tests: ${result^^}"
-          exit "${status}"
+          exit 0
 
       - name: Run Expo Doctor
         id: doctor
         if: steps.install.outputs.result == 'success'
-        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -176,12 +171,11 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "Expo Doctor: ${result^^}"
-          exit "${status}"
+          exit 0
 
       - name: Export production bundles
         id: export
         if: steps.install.outputs.result == 'success'
-        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -195,12 +189,11 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "Export: ${result^^}"
-          exit "${status}"
+          exit 0
 
       - name: Audit production dependencies
         id: audit
         if: steps.install.outputs.result == 'success'
-        continue-on-error: true
         working-directory: app
         shell: bash
         run: |
@@ -210,7 +203,7 @@ jobs:
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
           echo "Production dependency audit: ${result^^}"
-          exit "${status}"
+          exit 0
 
       - name: Collect results
         id: collect
@@ -297,15 +290,15 @@ jobs:
               --data "${payload}" > /dev/null
           }
 
-          publish_status checkout "${CHECKOUT}" "Private exact-SHA checkout"
-          publish_status install "${INSTALL}" "Dependency installation"
-          publish_status typecheck "${TYPECHECK}" "TypeScript"
-          publish_status lint "${LINT}" "ESLint"
-          publish_status tests "${TESTS}" "Unit and component tests"
-          publish_status doctor "${DOCTOR}" "Expo Doctor"
-          publish_status export "${EXPORT_RESULT}" "Production bundle export"
-          publish_status audit "${AUDIT}" "Production dependency audit"
-          publish_status full "${OVERALL}" "Mobile foundation validation"
+          publish_status checkout "${CHECKOUT:-failure}" "Private exact-SHA checkout"
+          publish_status install "${INSTALL:-failure}" "Dependency installation"
+          publish_status typecheck "${TYPECHECK:-failure}" "TypeScript"
+          publish_status lint "${LINT:-failure}" "ESLint"
+          publish_status tests "${TESTS:-failure}" "Unit and component tests"
+          publish_status doctor "${DOCTOR:-failure}" "Expo Doctor"
+          publish_status export "${EXPORT_RESULT:-failure}" "Production bundle export"
+          publish_status audit "${AUDIT:-failure}" "Production dependency audit"
+          publish_status full "${OVERALL:-failure}" "Mobile foundation validation"
 
       - name: Encrypt failure diagnostics
         if: always() && steps.collect.outputs.overall != 'success'
