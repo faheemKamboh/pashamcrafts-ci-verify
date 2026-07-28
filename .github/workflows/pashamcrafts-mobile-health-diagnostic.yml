@@ -1,0 +1,151 @@
+name: Diagnose PashamCrafts mobile health gates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pashamcrafts-mobile-health-diagnostic.yml"
+      - "ci/requests/pashamcrafts-mobile.json"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Diagnose Expo Doctor and production audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout verifier configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Resolve exact mobile SHA
+        id: request
+        shell: bash
+        env:
+          READ_TOKEN: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
+        run: |
+          set -euo pipefail
+          target_sha="$(jq -er '.target_sha' ci/requests/pashamcrafts-mobile.json)"
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          [ -n "${READ_TOKEN}" ]
+          [ -n "${STATUS_TOKEN}" ]
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact private mobile commit
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts-mobile
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        working-directory: app
+        shell: bash
+        run: npm install > "${RUNNER_TEMP}/npm-install.log" 2>&1
+
+      - name: Diagnose health gates
+        id: diagnose
+        working-directory: app
+        shell: bash
+        run: |
+          set +e
+          npm run doctor > "${RUNNER_TEMP}/doctor.log" 2>&1
+          doctor_status=$?
+          npm audit --omit=dev --audit-level=high --json > "${RUNNER_TEMP}/audit.json" 2>&1
+          audit_status=$?
+
+          slug() {
+            printf '%s' "$1" \
+              | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//g' \
+              | cut -c1-62
+          }
+
+          doctor_detail="success"
+          if [ "${doctor_status}" -ne 0 ]; then
+            doctor_detail="$(grep -E '(^✖|^✘|^Error:|^Warning:|failed|Failed|Invalid|missing|mismatch|incompatible|Expected|Actual)' "${RUNNER_TEMP}/doctor.log" | head -n 1)"
+            [ -n "${doctor_detail}" ] || doctor_detail="expo-doctor-failed"
+          fi
+
+          audit_detail="success"
+          if [ "${audit_status}" -ne 0 ]; then
+            audit_detail="$(node - <<'NODE' "${RUNNER_TEMP}/audit.json"
+const fs = require('fs');
+const input = fs.readFileSync(process.argv[2], 'utf8');
+try {
+  const parsed = JSON.parse(input);
+  const vulnerabilities = parsed.vulnerabilities || {};
+  const first = Object.values(vulnerabilities).find((item) => ['high', 'critical'].includes(item.severity));
+  if (first) {
+    const via = Array.isArray(first.via) ? first.via.find((entry) => typeof entry === 'object') : null;
+    const name = first.name || 'unknown-package';
+    const severity = first.severity || 'unknown-severity';
+    const title = via && via.title ? via.title : 'production-audit-failed';
+    console.log(`${severity}-${name}-${title}`);
+  } else {
+    console.log('production-audit-failed');
+  }
+} catch (_error) {
+  console.log('production-audit-json-unreadable');
+}
+NODE
+)"
+            [ -n "${audit_detail}" ] || audit_detail="production-audit-failed"
+          fi
+
+          echo "doctor_state=$([ "${doctor_status}" -eq 0 ] && echo success || echo failure)" >> "${GITHUB_OUTPUT}"
+          echo "audit_state=$([ "${audit_status}" -eq 0 ] && echo success || echo failure)" >> "${GITHUB_OUTPUT}"
+          echo "doctor_detail=$(slug "${doctor_detail}")" >> "${GITHUB_OUTPUT}"
+          echo "audit_detail=$(slug "${audit_detail}")" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish sanitized health diagnosis
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
+          STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
+          DOCTOR_STATE: ${{ steps.diagnose.outputs.doctor_state }}
+          AUDIT_STATE: ${{ steps.diagnose.outputs.audit_state }}
+          DOCTOR_DETAIL: ${{ steps.diagnose.outputs.doctor_detail }}
+          AUDIT_DETAIL: ${{ steps.diagnose.outputs.audit_detail }}
+        run: |
+          set -euo pipefail
+          target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          publish() {
+            local state="$1"
+            local context="$2"
+            local description="$3"
+            payload="$(jq -n \
+              --arg state "${state}" \
+              --arg context "${context}" \
+              --arg description "${description}" \
+              --arg target_url "${target_url}" \
+              '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            curl --fail-with-body --silent --show-error --request POST \
+              --header "Authorization: Bearer ${STATUS_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/faheemKamboh/pashamcrafts-mobile/statuses/${TARGET_SHA}" \
+              --data "${payload}" > /dev/null
+          }
+
+          publish "${DOCTOR_STATE}" "pashamcrafts-mobile/doctor-detail/${DOCTOR_DETAIL}" "sanitized Expo Doctor result"
+          publish "${AUDIT_STATE}" "pashamcrafts-mobile/audit-detail/${AUDIT_DETAIL}" "sanitized production audit result"
+
+      - name: Enforce health diagnosis result
+        shell: bash
+        run: |
+          test "${{ steps.diagnose.outputs.doctor_state }}" = success
+          test "${{ steps.diagnose.outputs.audit_state }}" = success
