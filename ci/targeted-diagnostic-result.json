@@ -1,5 +1,5 @@
 {
-  "request_id": "issue-84-print-documents-ce2fc88",
-  "target_sha": "ce2fc88eebe7433beabcbf2639e0286b22089e05",
-  "detail": "3 examples, 1 failures; ./spec/requests/admin/order_print_documents_spec.rb:36 | RSpec::Expectations::ExpectationNotMetError: expected \"<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n  <head>\\n    <title>Receipt — ORD-20260728-000001</title>\\n   ...ternal notes, raw audit data, cost, or profit.</p>\\n</article>\\n\\n    </main>\\n  </body>\\n</html>\\n\" to include \"Fuchsia Crochet Cardigan\" | ./spec/requests/admin/order_print_documents_spec.rb:42:in 'block (3 levels) in <top (required)>'"
+  "request_id": "issue-85-privacy-reports-targeted-98e4e7e",
+  "target_sha": "98e4e7e69c4448ca7068fbd2882e358f5f8084d9",
+  "detail": "2 examples, 0 failures; no failure detail"
 }
