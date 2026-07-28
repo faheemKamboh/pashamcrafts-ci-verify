@@ -1,6 +1,6 @@
 # PashamCrafts Mobile Validation
 
-The public verifier validates exact commits from `faheemKamboh/pashamcrafts-mobile` without mirroring private source.
+The `pashamcrafts-mobile` repository runs its own GitHub Actions while private-repository Actions quota is available. This public verifier is retained only as a fallback for exact-commit validation after that quota is exhausted or private Actions are otherwise unavailable.
 
 ## Credentials
 
@@ -9,12 +9,14 @@ The public verifier validates exact commits from `faheemKamboh/pashamcrafts-mobi
 
 The checkout token is never used for status writes and neither token has source write access.
 
-## Request
+## Fallback request
 
-Update `ci/requests/pashamcrafts-mobile.json` with one exact 40-character mobile commit SHA, or manually dispatch **Validate PashamCrafts mobile** with `target_sha`.
+Manually dispatch **Validate PashamCrafts mobile** with one exact 40-character `target_sha` only when the mobile repository's own Actions cannot be used.
+
+Do not maintain an automatic committed request file while private mobile Actions remain available.
 
 ## Checks
 
-The workflow runs on Node.js 22 and validates dependency installation, strict TypeScript, Expo ESLint, Jest and React Native Testing Library tests, Expo Doctor, Android/iOS/web export, and the production dependency audit.
+The fallback workflow runs on Node.js 22 and validates dependency installation, strict TypeScript, Expo ESLint, Jest and React Native Testing Library tests, Expo Doctor, Android/iOS/web export, and the production dependency audit.
 
-Failure logs are encrypted before upload. Generated bundles and private source are never uploaded. The initial bootstrap may upload only a generated `package-lock.json`, containing public dependency metadata, for one day so the lockfile can be committed and future runs can use `npm ci`.
+Failure logs are encrypted before upload. Generated bundles and private source are never uploaded.
