@@ -132,6 +132,7 @@ jobs:
             reason="rspec-and-coverage"
           fi
 
+          safe_reason="$(printf '%s' "${reason}" | tr -cs 'A-Za-z0-9_.-' '-' | sed 's/^-//; s/-$//' | cut -c1-55)"
           safe_summary="${summary:-RSpec summary unavailable}"
           safe_coverage="${coverage:-missing}"
           description="${safe_summary}; coverage ${safe_coverage}%; ${reason}"
@@ -139,7 +140,7 @@ jobs:
 
           echo "state=${state}" >> "${GITHUB_OUTPUT}"
           echo "description=${description}" >> "${GITHUB_OUTPUT}"
-          echo "reason=${reason}" >> "${GITHUB_OUTPUT}"
+          echo "reason=${safe_reason}" >> "${GITHUB_OUTPUT}"
 
           {
             echo "## PashamCrafts test diagnostic"
@@ -148,7 +149,7 @@ jobs:
             echo "State: **${state}**"
             echo "Summary: \`${safe_summary}\`"
             echo "Line coverage: \`${safe_coverage}%\`"
-            echo "Reason: \`${reason}\`"
+            echo "Reason: \`${safe_reason}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
           exit 0
@@ -161,17 +162,24 @@ jobs:
           STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
           STATE: ${{ steps.diagnostic.outputs.state }}
           DESCRIPTION: ${{ steps.diagnostic.outputs.description }}
+          REASON: ${{ steps.diagnostic.outputs.reason }}
         run: |
           set -euo pipefail
-          payload="$(jq -n \
-            --arg state "${STATE:-error}" \
-            --arg context "pashamcrafts/tests-detail" \
-            --arg description "${DESCRIPTION:-Diagnostic unavailable}" \
-            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
-          curl --fail-with-body --silent --show-error --request POST \
-            --header "Authorization: Bearer ${STATUS_TOKEN}" \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "${{ github.api_url }}/repos/faheemKamboh/pashamcrafts/statuses/${TARGET_SHA}" \
-            --data "${payload}" > /dev/null
+          publish_status() {
+            local context="$1"
+            payload="$(jq -n \
+              --arg state "${STATE:-error}" \
+              --arg context "${context}" \
+              --arg description "${DESCRIPTION:-Diagnostic unavailable}" \
+              --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+            curl --fail-with-body --silent --show-error --request POST \
+              --header "Authorization: Bearer ${STATUS_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/faheemKamboh/pashamcrafts/statuses/${TARGET_SHA}" \
+              --data "${payload}" > /dev/null
+          }
+
+          publish_status "pashamcrafts/tests-detail"
+          publish_status "pashamcrafts/tests-detail-${REASON:-unknown}"
