@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-136-brand-logo-fuchsia-e80cfa8f",
-  "target_sha": "e80cfa8fa8ea60180fcdc27bd3c64ee83d8bd6bd",
-  "checks": ["full"],
-  "specs": []
+  "request_id": "issue-84-print-documents-ce2fc88",
+  "target_sha": "ce2fc88eebe7433beabcbf2639e0286b22089e05",
+  "checks": ["targeted"],
+  "specs": ["spec/requests/admin/order_print_documents_spec.rb"]
 }
