@@ -169,8 +169,16 @@ jobs:
           npm run doctor > "${RUNNER_TEMP}/doctor.log" 2>&1
           status=$?
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          detail="success"
+          if [ "${status}" -ne 0 ]; then
+            detail="$(grep -E '(^✖|^✘|^Error:|^Warning:|failed|Failed|Invalid|missing|mismatch|incompatible|Expected|Actual|Use expo install|dependencies)' "${RUNNER_TEMP}/doctor.log" | head -n 1)"
+            [ -n "${detail}" ] || detail="expo-doctor-failed"
+          fi
+          detail="$(printf '%s' "${detail}" | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//' | cut -c1-62)"
+          [ -n "${detail}" ] || detail="expo-doctor-failed"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          echo "Expo Doctor: ${result^^}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
+          echo "Expo Doctor: ${result^^} (${detail})"
           exit 0
 
       - name: Export production bundles
@@ -198,11 +206,39 @@ jobs:
         shell: bash
         run: |
           set +e
-          npm audit --omit=dev --audit-level=high > "${RUNNER_TEMP}/audit.log" 2>&1
+          npm audit --omit=dev --audit-level=high --json > "${RUNNER_TEMP}/audit.json" 2> "${RUNNER_TEMP}/audit.stderr"
           status=$?
           result=$([ "${status}" -eq 0 ] && echo success || echo failure)
+          detail="success"
+          if [ "${status}" -ne 0 ]; then
+            detail="$(node - <<'NODE' "${RUNNER_TEMP}/audit.json" "${RUNNER_TEMP}/audit.stderr"
+          const fs = require('fs');
+          const jsonPath = process.argv[2];
+          const stderrPath = process.argv[3];
+          try {
+            const parsed = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+            const vulnerabilities = parsed.vulnerabilities || {};
+            const first = Object.values(vulnerabilities).find((item) => ['high', 'critical'].includes(item.severity));
+            if (first) {
+              const via = Array.isArray(first.via) ? first.via.find((entry) => typeof entry === 'object') : null;
+              const title = via && via.title ? via.title : 'production-audit-failed';
+              console.log(`${first.severity || 'unknown'}-${first.name || 'unknown-package'}-${title}`);
+            } else {
+              console.log('production-audit-failed');
+            }
+          } catch (_error) {
+            const stderr = fs.existsSync(stderrPath) ? fs.readFileSync(stderrPath, 'utf8') : '';
+            console.log(stderr.split(/\r?\n/).find(Boolean) || 'production-audit-json-unreadable');
+          }
+          NODE
+          )"
+            [ -n "${detail}" ] || detail="production-audit-failed"
+          fi
+          detail="$(printf '%s' "${detail}" | sed -E 's#https?://[^[:space:]]+##g; s#(github_pat_|ghp_|ghs_)[A-Za-z0-9_]+#redacted#g; s/[^A-Za-z0-9@._+-]+/-/g; s/^-+|-+$//' | cut -c1-62)"
+          [ -n "${detail}" ] || detail="production-audit-failed"
           echo "result=${result}" >> "${GITHUB_OUTPUT}"
-          echo "Production dependency audit: ${result^^}"
+          echo "detail=${detail}" >> "${GITHUB_OUTPUT}"
+          echo "Production dependency audit: ${result^^} (${detail})"
           exit 0
 
       - name: Collect results
@@ -217,8 +253,10 @@ jobs:
           LINT: ${{ steps.lint.outputs.result }}
           TESTS: ${{ steps.tests.outputs.result }}
           DOCTOR: ${{ steps.doctor.outputs.result }}
+          DOCTOR_DETAIL: ${{ steps.doctor.outputs.detail }}
           EXPORT_RESULT: ${{ steps.export.outputs.result }}
           AUDIT: ${{ steps.audit.outputs.result }}
+          AUDIT_DETAIL: ${{ steps.audit.outputs.detail }}
         run: |
           set -euo pipefail
           checkout=$([ "${CHECKOUT:-failure}" = success ] && [ "${CONFIRM:-failure}" = success ] && echo success || echo failure)
@@ -227,8 +265,10 @@ jobs:
           lint="${LINT:-failure}"
           tests="${TESTS:-failure}"
           doctor="${DOCTOR:-failure}"
+          doctor_detail="${DOCTOR_DETAIL:-not-run}"
           export_result="${EXPORT_RESULT:-failure}"
           audit="${AUDIT:-failure}"
+          audit_detail="${AUDIT_DETAIL:-not-run}"
           overall=success
 
           for result in "${checkout}" "${install}" "${typecheck}" "${lint}" "${tests}" "${doctor}" "${export_result}" "${audit}"; do
@@ -242,8 +282,10 @@ jobs:
             echo "lint=${lint}"
             echo "tests=${tests}"
             echo "doctor=${doctor}"
+            echo "doctor_detail=${doctor_detail}"
             echo "export=${export_result}"
             echo "audit=${audit}"
+            echo "audit_detail=${audit_detail}"
             echo "overall=${overall}"
           } >> "${GITHUB_OUTPUT}"
 
@@ -259,8 +301,10 @@ jobs:
           LINT: ${{ steps.collect.outputs.lint }}
           TESTS: ${{ steps.collect.outputs.tests }}
           DOCTOR: ${{ steps.collect.outputs.doctor }}
+          DOCTOR_DETAIL: ${{ steps.collect.outputs.doctor_detail }}
           EXPORT_RESULT: ${{ steps.collect.outputs.export }}
           AUDIT: ${{ steps.collect.outputs.audit }}
+          AUDIT_DETAIL: ${{ steps.collect.outputs.audit_detail }}
           OVERALL: ${{ steps.collect.outputs.overall }}
         run: |
           set -euo pipefail
@@ -296,8 +340,10 @@ jobs:
           publish_status lint "${LINT:-failure}" "ESLint"
           publish_status tests "${TESTS:-failure}" "Unit and component tests"
           publish_status doctor "${DOCTOR:-failure}" "Expo Doctor"
+          publish_status "doctor-detail/${DOCTOR_DETAIL:-not-run}" "${DOCTOR:-failure}" "Expo Doctor detail"
           publish_status export "${EXPORT_RESULT:-failure}" "Production bundle export"
           publish_status audit "${AUDIT:-failure}" "Production dependency audit"
+          publish_status "audit-detail/${AUDIT_DETAIL:-not-run}" "${AUDIT:-failure}" "Production audit detail"
           publish_status full "${OVERALL:-failure}" "Mobile foundation validation"
 
       - name: Encrypt failure diagnostics
@@ -312,7 +358,8 @@ jobs:
             "${RUNNER_TEMP}/tests.log" \
             "${RUNNER_TEMP}/doctor.log" \
             "${RUNNER_TEMP}/export.log" \
-            "${RUNNER_TEMP}/audit.log"
+            "${RUNNER_TEMP}/audit.json" \
+            "${RUNNER_TEMP}/audit.stderr"
 
       - name: Upload encrypted failure diagnostics
         if: always() && steps.collect.outputs.overall != 'success'
