@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/pashamcrafts-mobile-install-diagnostic.yml"
+      - "ci/requests/pashamcrafts-mobile.json"
 
 permissions:
   contents: read
