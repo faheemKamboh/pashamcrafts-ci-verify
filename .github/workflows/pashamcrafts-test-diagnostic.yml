@@ -51,7 +51,7 @@ jobs:
             echo "Invalid target SHA."
             exit 1
           }
-          if ! jq -e '(.checks | index("full")) or (.checks | index("tests"))' ci/request.json > /dev/null; then
+          if ! jq -e '(.checks // []) | (index("full") or index("tests"))' ci/request.json > /dev/null; then
             echo "run_diagnostic=false" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
@@ -113,6 +113,9 @@ jobs:
 
           summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
           coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/tests.log" | tail -n 1 | awk '{print $3}' || true)"
+          first_failure_title="$(awk '/^Failures:/ { in_failures=1; next } in_failures && /^[[:space:]]+[0-9]+\) / { sub(/^[[:space:]]+[0-9]+\) /, ""); print; exit }' "${RUNNER_TEMP}/tests.log" || true)"
+          first_failure_file="$(grep -E '^# ./spec/' "${RUNNER_TEMP}/tests.log" | head -n 1 | sed 's/^# \.\///' || true)"
+
           coverage_status=1
           if [ -n "${coverage}" ]; then
             awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
@@ -121,26 +124,39 @@ jobs:
 
           state=failure
           reason="unknown"
+          detail="unknown"
           if [ "${database_status}" -ne 0 ]; then
             reason="database"
+            detail="database"
           elif [ "${command_status}" -ne 0 ]; then
             reason="rspec"
+            if [ -n "${first_failure_file}" ]; then
+              detail="rspec-${first_failure_file}"
+            elif [ -n "${first_failure_title}" ]; then
+              detail="rspec-${first_failure_title}"
+            else
+              detail="rspec-unknown"
+            fi
           elif [ "${coverage_status}" -ne 0 ]; then
             reason="coverage-${coverage:-missing}"
+            detail="coverage-${coverage:-missing}"
           else
             state=success
             reason="rspec-and-coverage"
+            detail="rspec-and-coverage"
           fi
 
           safe_reason="$(printf '%s' "${reason}" | tr -cs 'A-Za-z0-9_.-' '-' | sed 's/^-//; s/-$//' | cut -c1-55)"
+          safe_detail="$(printf '%s' "${detail}" | tr -cs 'A-Za-z0-9_.-' '-' | sed 's/^-//; s/-$//' | cut -c1-55)"
           safe_summary="${summary:-RSpec summary unavailable}"
           safe_coverage="${coverage:-missing}"
-          description="${safe_summary}; coverage ${safe_coverage}%; ${reason}"
+          description="${safe_summary}; coverage ${safe_coverage}%; ${safe_detail}"
           description="${description:0:140}"
 
           echo "state=${state}" >> "${GITHUB_OUTPUT}"
           echo "description=${description}" >> "${GITHUB_OUTPUT}"
           echo "reason=${safe_reason}" >> "${GITHUB_OUTPUT}"
+          echo "detail=${safe_detail}" >> "${GITHUB_OUTPUT}"
 
           {
             echo "## PashamCrafts test diagnostic"
@@ -150,6 +166,7 @@ jobs:
             echo "Summary: \`${safe_summary}\`"
             echo "Line coverage: \`${safe_coverage}%\`"
             echo "Reason: \`${safe_reason}\`"
+            echo "Detail: \`${safe_detail}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
           exit 0
@@ -163,6 +180,7 @@ jobs:
           STATE: ${{ steps.diagnostic.outputs.state }}
           DESCRIPTION: ${{ steps.diagnostic.outputs.description }}
           REASON: ${{ steps.diagnostic.outputs.reason }}
+          DETAIL: ${{ steps.diagnostic.outputs.detail }}
         run: |
           set -euo pipefail
           publish_status() {
@@ -183,3 +201,4 @@ jobs:
 
           publish_status "pashamcrafts/tests-detail"
           publish_status "pashamcrafts/tests-detail-${REASON:-unknown}"
+          publish_status "pashamcrafts/tests-detail-${DETAIL:-unknown}"
