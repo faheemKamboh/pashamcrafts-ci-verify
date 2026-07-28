@@ -1,0 +1,177 @@
+name: PashamCrafts test diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ci/request.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests_detail:
+    name: Publish sanitized PashamCrafts test detail
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout verification configuration
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Resolve PashamCrafts test request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          project="$(jq -er '.project // "pashamcrafts"' ci/request.json)"
+          target_sha="$(jq -er '.target_sha' ci/request.json)"
+          checks="$(jq -r '.checks[]?' ci/request.json | paste -sd, -)"
+
+          if [ "${project}" != "pashamcrafts" ]; then
+            echo "run_diagnostic=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid target SHA."
+            exit 1
+          }
+          if ! jq -e '.checks | index("full") or index("tests")' ci/request.json > /dev/null; then
+            echo "run_diagnostic=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "run_diagnostic=true" >> "${GITHUB_OUTPUT}"
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+          echo "checks=${checks}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact PashamCrafts commit
+        if: steps.request.outputs.run_diagnostic == 'true'
+        uses: actions/checkout@1044a6dea927916f2c38ba5aeffbc0a847b1221a
+        with:
+          repository: faheemKamboh/pashamcrafts
+          ref: ${{ steps.request.outputs.target_sha }}
+          token: ${{ secrets.PASHAMCRAFTS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: app
+
+      - name: Confirm exact checkout
+        if: steps.request.outputs.run_diagnostic == 'true'
+        run: test "$(git -C app rev-parse HEAD)" = "${{ steps.request.outputs.target_sha }}"
+
+      - name: Install system dependencies
+        if: steps.request.outputs.run_diagnostic == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libnspr4 libnss3 libpq-dev libvips node-gyp postgresql-client
+
+      - name: Set up Ruby and gems
+        if: steps.request.outputs.run_diagnostic == 'true'
+        uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9
+        with:
+          bundler-cache: true
+          working-directory: app
+
+      - name: Run sanitized RSpec coverage diagnostic
+        id: diagnostic
+        if: steps.request.outputs.run_diagnostic == 'true'
+        working-directory: app
+        shell: bash
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:password@localhost/pashamcrafts_test
+          SKIP_CSS_BUILD: "1"
+          SKIP_JS_BUILD: "1"
+        run: |
+          set +e
+          bin/rails db:create db:migrate > "${RUNNER_TEMP}/database.log" 2>&1
+          database_status=$?
+
+          if [ "${database_status}" -eq 0 ]; then
+            bundle exec rspec --format progress > "${RUNNER_TEMP}/tests.log" 2>&1
+            command_status=$?
+          else
+            command_status=1
+            : > "${RUNNER_TEMP}/tests.log"
+          fi
+
+          summary="$(grep -E '^[0-9]+ examples?, [0-9]+ failures?' "${RUNNER_TEMP}/tests.log" | tail -n 1 || true)"
+          coverage="$(grep -oE 'Line Coverage: [0-9.]+' "${RUNNER_TEMP}/tests.log" | tail -n 1 | awk '{print $3}' || true)"
+          coverage_status=1
+          if [ -n "${coverage}" ]; then
+            awk -v coverage="${coverage}" 'BEGIN { exit !(coverage >= 98) }'
+            coverage_status=$?
+          fi
+
+          state=failure
+          reason="unknown"
+          if [ "${database_status}" -ne 0 ]; then
+            reason="database"
+          elif [ "${command_status}" -ne 0 ]; then
+            reason="rspec"
+          elif [ "${coverage_status}" -ne 0 ]; then
+            reason="coverage-${coverage:-missing}"
+          else
+            state=success
+            reason="rspec-and-coverage"
+          fi
+
+          safe_summary="${summary:-RSpec summary unavailable}"
+          safe_coverage="${coverage:-missing}"
+          description="${safe_summary}; coverage ${safe_coverage}%; ${reason}"
+          description="${description:0:140}"
+
+          echo "state=${state}" >> "${GITHUB_OUTPUT}"
+          echo "description=${description}" >> "${GITHUB_OUTPUT}"
+          echo "reason=${reason}" >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "## PashamCrafts test diagnostic"
+            echo
+            echo "Target: \`${{ steps.request.outputs.target_sha }}\`"
+            echo "State: **${state}**"
+            echo "Summary: \`${safe_summary}\`"
+            echo "Line coverage: \`${safe_coverage}%\`"
+            echo "Reason: \`${reason}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          exit 0
+
+      - name: Publish sanitized test detail status
+        if: steps.request.outputs.run_diagnostic == 'true'
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.request.outputs.target_sha }}
+          STATUS_TOKEN: ${{ secrets.PASHAMCRAFTS_STATUS_TOKEN }}
+          STATE: ${{ steps.diagnostic.outputs.state }}
+          DESCRIPTION: ${{ steps.diagnostic.outputs.description }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -n \
+            --arg state "${STATE:-error}" \
+            --arg context "pashamcrafts/tests-detail" \
+            --arg description "${DESCRIPTION:-Diagnostic unavailable}" \
+            --arg target_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{state: $state, context: $context, description: $description, target_url: $target_url}')"
+          curl --fail-with-body --silent --show-error --request POST \
+            --header "Authorization: Bearer ${STATUS_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${{ github.api_url }}/repos/faheemKamboh/pashamcrafts/statuses/${TARGET_SHA}" \
+            --data "${payload}" > /dev/null
