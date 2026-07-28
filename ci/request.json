@@ -1,6 +1,6 @@
 {
-  "request_id": "issue-85-privacy-reports-targeted-c552a10",
-  "target_sha": "c552a10d9e0d69298d1cfd6a8eeb15bb7196cc1c",
-  "checks": ["targeted"],
-  "specs": ["spec/requests/admin/reports_spec.rb", "spec/services/reports/privacy_safe_snapshot_spec.rb"]
+  "request_id": "issue-84-print-documents-tests-detail-1277860",
+  "target_sha": "12778602a7b82ba7883d6b79c2f3c7a8bb926fce",
+  "checks": ["tests"],
+  "specs": []
 }
