@@ -1,6 +1,6 @@
 {
-  "request_id": "api-v1-product-detail-full-874f244",
-  "target_sha": "874f244e726b4ef781bef39268272b32519530fe",
+  "request_id": "api-v1-product-detail-full-808f245",
+  "target_sha": "808f24509af16c46cf46252de4b54fb2a061f0dd",
   "checks": ["full"],
   "specs": []
 }
