@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   smoke:
-    name: Generate no-key sample video
+    name: Generate 10-second Urdu sample video
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -69,36 +69,35 @@ jobs:
           set -euxo pipefail
           /usr/bin/time -v -o ../install-metrics.txt uv sync --frozen
 
-      - name: Create synthetic local source clip
+      - name: Create 10-second synthetic source clip
         shell: bash
         run: |
           set -euxo pipefail
           ffmpeg -y \
-            -f lavfi -i "testsrc2=size=720x1280:rate=30:duration=15" \
-            -f lavfi -i "sine=frequency=220:sample_rate=44100:duration=15" \
+            -f lavfi -i "testsrc2=size=720x1280:rate=30:duration=10" \
             -c:v libx264 -preset veryfast -pix_fmt yuv420p \
-            -c:a aac -shortest \
+            -an \
             "$GITHUB_WORKSPACE/mpt-source.mp4"
           ffprobe -v error -show_entries format=duration,size -of default=nw=1 "$GITHUB_WORKSPACE/mpt-source.mp4"
 
-      - name: Generate video with MoneyPrinterTurbo CLI
+      - name: Generate 10-second Urdu video with MoneyPrinterTurbo CLI
         shell: bash
         working-directory: MoneyPrinterTurbo
         run: |
           set -euxo pipefail
-          SCRIPT="This short video was generated inside GitHub Actions using MoneyPrinterTurbo. The workflow uses local footage, free Edge text to speech, and FFmpeg composition, with no paid API key."
+          SCRIPT="ایک ننھی چڑیا نے پیاسے پودے کو پانی دیا۔ اگلی صبح پودے پر خوبصورت پھول کھل گیا۔"
           /usr/bin/time -v -o ../generation-metrics.txt \
             uv run python cli.py \
-              --video-subject "MoneyPrinterTurbo GitHub Actions smoke test" \
+              --video-subject "ننھی چڑیا اور پیاسا پودا" \
               --video-script "$SCRIPT" \
               --video-source local \
               --video-materials "$GITHUB_WORKSPACE/mpt-source.mp4" \
               --video-aspect "9:16" \
-              --voice-name "en-US-AvaNeural-Female" \
+              --voice-name "ur-PK-UzmaNeural-Female" \
               --bgm-type none \
               --no-subtitle-enabled \
               --video-count 1 \
-              --video-clip-duration 5 \
+              --video-clip-duration 3 \
               --n-threads 2 \
             | tee ../moneyprinter-result.json
 
@@ -120,7 +119,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## MoneyPrinterTurbo GHA smoke test"
+            echo "## MoneyPrinterTurbo 10-second Urdu GHA test"
             echo
             echo "**Upstream commit:** $(cat moneyprinter-commit.txt 2>/dev/null || echo unavailable)"
             echo
@@ -148,7 +147,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: moneyprinter-gha-smoke-${{ github.run_id }}
+          name: moneyprinter-urdu-10s-${{ github.run_id }}
           if-no-files-found: warn
           retention-days: 7
           path: |
