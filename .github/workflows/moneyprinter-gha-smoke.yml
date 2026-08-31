@@ -1,0 +1,161 @@
+name: MoneyPrinterTurbo GHA Smoke
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/moneyprinter-gha-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Generate 10-second Urdu sample video
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout CI repo
+        uses: actions/checkout@v4
+
+      - name: Record runner resources
+        shell: bash
+        run: |
+          set -euxo pipefail
+          {
+            echo "## Runner"
+            uname -a
+            echo
+            echo "## CPU"
+            nproc
+            lscpu | sed -n '1,25p'
+            echo
+            echo "## Memory"
+            free -h
+            echo
+            echo "## Disk"
+            df -h /
+          } | tee runner-resources.txt
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system tools and uv
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          python -m pip install --upgrade pip uv
+          ffmpeg -version | head -n 3
+          uv --version
+
+      - name: Clone MoneyPrinterTurbo
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/harry0703/MoneyPrinterTurbo.git
+          cd MoneyPrinterTurbo
+          git rev-parse HEAD | tee ../moneyprinter-commit.txt
+          cp config.example.toml config.toml
+
+      - name: Install MoneyPrinterTurbo dependencies
+        shell: bash
+        working-directory: MoneyPrinterTurbo
+        run: |
+          set -euxo pipefail
+          /usr/bin/time -v -o ../install-metrics.txt uv sync --frozen
+
+      - name: Create 10-second synthetic source clip
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ffmpeg -y \
+            -f lavfi -i "testsrc2=size=720x1280:rate=30:duration=10" \
+            -c:v libx264 -preset veryfast -pix_fmt yuv420p \
+            -an \
+            "$GITHUB_WORKSPACE/mpt-source.mp4"
+          ffprobe -v error -show_entries format=duration,size -of default=nw=1 "$GITHUB_WORKSPACE/mpt-source.mp4"
+
+      - name: Generate 10-second Urdu video with MoneyPrinterTurbo CLI
+        shell: bash
+        working-directory: MoneyPrinterTurbo
+        run: |
+          set -euxo pipefail
+          SCRIPT="ایک ننھی چڑیا نے پیاسے پودے کو پانی دیا۔ اگلی صبح پودے پر خوبصورت پھول کھل گیا۔"
+          /usr/bin/time -v -o ../generation-metrics.txt \
+            uv run python cli.py \
+              --video-subject "ننھی چڑیا اور پیاسا پودا" \
+              --video-script "$SCRIPT" \
+              --video-source local \
+              --video-materials "$GITHUB_WORKSPACE/mpt-source.mp4" \
+              --video-aspect "9:16" \
+              --voice-name "ur-PK-UzmaNeural-Female" \
+              --bgm-type none \
+              --no-subtitle-enabled \
+              --video-count 1 \
+              --video-clip-duration 3 \
+              --n-threads 2 \
+            | tee ../moneyprinter-result.json
+
+      - name: Inspect generated video
+        shell: bash
+        run: |
+          set -euxo pipefail
+          OUTPUT="$(find MoneyPrinterTurbo/storage/tasks -type f -name '*.mp4' | sort | tail -n 1)"
+          test -n "$OUTPUT"
+          echo "$OUTPUT" | tee generated-video-path.txt
+          ffprobe -v error \
+            -show_entries stream=codec_name,width,height,r_frame_rate:format=duration,size,bit_rate \
+            -of json "$OUTPUT" | tee generated-video-ffprobe.json
+          ls -lh "$OUTPUT"
+          cp "$OUTPUT" generated-video.mp4
+
+      - name: Write workflow summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## MoneyPrinterTurbo 10-second Urdu GHA test"
+            echo
+            echo "**Upstream commit:** $(cat moneyprinter-commit.txt 2>/dev/null || echo unavailable)"
+            echo
+            if [ -f generated-video-ffprobe.json ]; then
+              echo "### Generated video"
+              echo '```json'
+              cat generated-video-ffprobe.json
+              echo '```'
+            fi
+            if [ -f install-metrics.txt ]; then
+              echo "### Dependency installation metrics"
+              echo '```text'
+              grep -E 'Elapsed|Maximum resident|User time|System time' install-metrics.txt || true
+              echo '```'
+            fi
+            if [ -f generation-metrics.txt ]; then
+              echo "### Generation metrics"
+              echo '```text'
+              grep -E 'Elapsed|Maximum resident|User time|System time' generation-metrics.txt || true
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: moneyprinter-urdu-10s-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            generated-video.mp4
+            generated-video-ffprobe.json
+            generated-video-path.txt
+            moneyprinter-result.json
+            moneyprinter-commit.txt
+            runner-resources.txt
+            install-metrics.txt
+            generation-metrics.txt
