@@ -1,0 +1,171 @@
+name: LTX-Video 2B GHA Smoke
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ltx-video-gha-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate real motion clip on CPU runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout CI repo
+        uses: actions/checkout@v4
+
+      - name: Record runner resources
+        shell: bash
+        run: |
+          set -euxo pipefail
+          {
+            echo "## CPU"
+            nproc
+            lscpu | sed -n '1,30p'
+            echo
+            echo "## Memory"
+            free -h
+            echo
+            echo "## Disk"
+            df -h /
+          } | tee runner-resources.txt
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install system and Python prerequisites
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg git-lfs
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+          python -m pip install "huggingface_hub[hf_xet]"
+          python - <<'PY'
+          import torch
+          print('torch', torch.__version__)
+          print('cuda available', torch.cuda.is_available())
+          print('threads', torch.get_num_threads())
+          PY
+
+      - name: Clone official LTX-Video
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/Lightricks/LTX-Video.git
+          cd LTX-Video
+          git rev-parse HEAD | tee ../ltx-commit.txt
+          python -m pip install -e '.[inference]'
+
+      - name: Download 2B distilled checkpoint
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd LTX-Video
+          /usr/bin/time -v -o ../download-metrics.txt \
+            hf download Lightricks/LTX-Video \
+              ltxv-2b-0.9.6-distilled-04-25.safetensors \
+              --local-dir .
+          ls -lh ltxv-2b-0.9.6-distilled-04-25.safetensors
+          df -h /
+
+      - name: Attempt actual text-to-video generation
+        shell: bash
+        working-directory: LTX-Video
+        run: |
+          set +e
+          mkdir -p ../ltx-output
+          PROMPT="A young child wearing a red shirt is already visible on the left side of a sunny garden. The same child takes two clear walking steps toward a small wilted plant on the right. The child remains visible throughout the shot and stops beside the plant. Static camera, full body visible, continuous natural motion, no cuts, no character appearing suddenly."
+          /usr/bin/time -v -o ../generation-metrics.txt \
+            timeout 1200s python inference.py \
+              --prompt "$PROMPT" \
+              --height 256 \
+              --width 448 \
+              --num_frames 17 \
+              --frame_rate 24 \
+              --seed 12345 \
+              --output_path ../ltx-output \
+              --pipeline_config configs/ltxv-2b-0.9.6-distilled.yaml \
+            > ../ltx-inference.log 2>&1
+          RC=$?
+          echo "$RC" | tee ../inference-exit-code.txt
+          echo "Inference exit code: $RC"
+          tail -n 120 ../ltx-inference.log || true
+          exit 0
+
+      - name: Inspect any generated video
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          find ltx-output -type f -maxdepth 2 -print | tee output-files.txt
+          VIDEO="$(find ltx-output -type f \( -name '*.mp4' -o -name '*.webm' \) | head -n 1)"
+          if [ -n "$VIDEO" ]; then
+            cp "$VIDEO" generated-ltx-video.mp4
+            ffprobe -v error \
+              -show_entries stream=codec_name,width,height,r_frame_rate,nb_frames:format=duration,size,bit_rate \
+              -of json generated-ltx-video.mp4 | tee generated-video-ffprobe.json
+          fi
+
+      - name: Write factual summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## LTX-Video 2B on standard GitHub Actions CPU runner"
+            echo
+            echo "**Model:** LTXV 2B 0.9.6 distilled"
+            echo "**Requested clip:** 448x256, 17 frames, 24 FPS"
+            echo "**Inference exit code:** $(cat inference-exit-code.txt 2>/dev/null || echo unavailable)"
+            echo "**Video produced:** $([ -f generated-ltx-video.mp4 ] && echo yes || echo no)"
+            echo
+            if [ -f generation-metrics.txt ]; then
+              echo "### Generation resource metrics"
+              echo '```text'
+              grep -E 'Elapsed|Maximum resident|User time|System time|Exit status' generation-metrics.txt || true
+              echo '```'
+            fi
+            if [ -f generated-video-ffprobe.json ]; then
+              echo "### Output video"
+              echo '```json'
+              cat generated-video-ffprobe.json
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ltx-video-gha-${{ github.run_id }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            generated-ltx-video.mp4
+            generated-video-ffprobe.json
+            ltx-inference.log
+            inference-exit-code.txt
+            generation-metrics.txt
+            download-metrics.txt
+            runner-resources.txt
+            ltx-commit.txt
+            output-files.txt
+
+      - name: Mark test failed if generation failed
+        if: always()
+        shell: bash
+        run: |
+          RC="$(cat inference-exit-code.txt 2>/dev/null || echo 999)"
+          if [ "$RC" != "0" ] || [ ! -f generated-ltx-video.mp4 ]; then
+            echo "LTX-Video did not successfully produce a video on this runner."
+            exit 1
+          fi
+          echo "LTX-Video successfully produced a real generated video."
