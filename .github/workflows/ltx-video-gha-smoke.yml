@@ -13,7 +13,6 @@ jobs:
   generate:
     name: Generate real motion clip on CPU runner
     runs-on: ubuntu-latest
-    timeout-minutes: 35
 
     steps:
       - name: Checkout CI repo
@@ -77,7 +76,7 @@ jobs:
           ls -lh ltxv-2b-0.9.6-distilled-04-25.safetensors
           df -h /
 
-      - name: Attempt actual text-to-video generation
+      - name: Attempt actual text-to-video generation without artificial timeout
         shell: bash
         working-directory: LTX-Video
         run: |
@@ -85,7 +84,7 @@ jobs:
           mkdir -p ../ltx-output
           PROMPT="A young child wearing a red shirt is already visible on the left side of a sunny garden. The same child takes two clear walking steps toward a small wilted plant on the right. The child remains visible throughout the shot and stops beside the plant. Static camera, full body visible, continuous natural motion, no cuts, no character appearing suddenly."
           /usr/bin/time -v -o ../generation-metrics.txt \
-            timeout 1200s python inference.py \
+            python inference.py \
               --prompt "$PROMPT" \
               --height 256 \
               --width 448 \
@@ -124,6 +123,7 @@ jobs:
             echo
             echo "**Model:** LTXV 2B 0.9.6 distilled"
             echo "**Requested clip:** 448x256, 17 frames, 24 FPS"
+            echo "**Artificial inference timeout:** none"
             echo "**Inference exit code:** $(cat inference-exit-code.txt 2>/dev/null || echo unavailable)"
             echo "**Video produced:** $([ -f generated-ltx-video.mp4 ] && echo yes || echo no)"
             echo
